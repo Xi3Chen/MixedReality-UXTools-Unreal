@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.0",
+	"EngineAssociation": "5.3",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -28,7 +28,6 @@
 			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/f9f9cddaf5834ad1abeda49da34adf85",
 			"SupportedTargetPlatforms": [
 				"Win64",
-				"HoloLens",
 				"Android"
 			]
 		},
@@ -50,8 +49,7 @@
 			"Name": "WindowsMixedReality",
 			"Enabled": true,
 			"SupportedTargetPlatforms": [
-				"Win64",
-				"HoloLens"
+				"Win64"
 			]
 		},
 		{

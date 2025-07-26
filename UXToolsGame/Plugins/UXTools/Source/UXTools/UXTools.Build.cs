@@ -24,7 +24,7 @@ public class UXTools : ModuleRules
 		// DirectXMath is not present by default in non-Windows platforms and doesn't build in Android 
 		// when using gcc so we add a definition to disable code using it to avoid build breaks.
 		// See Task 218: Investigate building DirectXMath for Android and iOS.
-		if (Target.Platform == UnrealTargetPlatform.Win64 || Target.Platform == UnrealTargetPlatform.HoloLens)
+		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			PrivateDefinitions.Add("UXT_DIRECTXMATH_SUPPORTED=1");
 		}
