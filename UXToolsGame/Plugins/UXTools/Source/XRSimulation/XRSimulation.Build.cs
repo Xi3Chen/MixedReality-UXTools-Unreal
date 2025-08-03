@@ -15,6 +15,7 @@ public class XRSimulation : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"HeadMountedDisplay",
+				"XRBase",
 				"InputCore"
 			}
 		);
@@ -25,7 +26,8 @@ public class XRSimulation : ModuleRules
 				"RHI",
 				"RenderCore",
 				"Slate",
-				"SlateCore"
+				"SlateCore",
+				"RHI"
 			}
 		);
 

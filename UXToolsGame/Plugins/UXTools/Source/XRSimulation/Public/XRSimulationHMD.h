@@ -103,9 +103,15 @@ public:
 		const struct FHeadMountedDisplayPassContext& Context, FVector2D& EyeToSrcUVScaleValue,
 		FVector2D& EyeToSrcUVOffsetValue) const override;
 	virtual IStereoRenderTargetManager* GetRenderTargetManager() override;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+	virtual void RenderTexture_RenderThread(
+		class FRHICommandListImmediate& RHICmdList, class FRHITexture* BackBuffer, class FRHITexture* SrcTexture,
+		FVector2D WindowSize) const override;
+#else
 	virtual void RenderTexture_RenderThread(
 		class FRHICommandListImmediate& RHICmdList, class FRHITexture2D* BackBuffer, class FRHITexture2D* SrcTexture,
 		FVector2D WindowSize) const override;
+#endif
 
 	/** IStereoRenderTargetManager */
 	virtual bool ShouldUseSeparateRenderTarget() const override;

@@ -1,4 +1,8 @@
 ![Mixed Reality Toolkit](Docs/Images/Logos/MRTK_Unreal_UXT_Banner_Rounded.png)
+# Now start
+- [ ] Bump the version to 5.3 and confirm everything works correctly
+- [ ] Package the Android build
+- [ ] Run tests on HoloLens (I don’t have a HoloLens, so this will take a while)
 
 # What are the UX Tools?
 

@@ -14,7 +14,8 @@ public class XRSimulationInput : ModuleRules
 				"Core",
 				"CoreUObject",
 				"Engine",
-				"InputCore"
+				"InputCore",
+				"ApplicationCore"
 			}
 		);
 

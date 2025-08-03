@@ -471,7 +471,7 @@ IStereoRenderTargetManager* FXRSimulationHMD::GetRenderTargetManager()
 }
 
 void FXRSimulationHMD::RenderTexture_RenderThread(
-	class FRHICommandListImmediate& RHICmdList, class FRHITexture2D* BackBuffer, class FRHITexture2D* SrcTexture,
+	class FRHICommandListImmediate& RHICmdList, class FRHITexture* BackBuffer, class FRHITexture* SrcTexture,
 	FVector2D WindowSize) const
 {
 	if (SpectatorScreenController)

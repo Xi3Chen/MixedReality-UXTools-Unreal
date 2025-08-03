@@ -120,7 +120,11 @@ void UUxtToggleGroupComponent::BeginPlay()
 			else if (ComponentReference.OtherActor != nullptr)
 			{
 				// If an actor name was specified, but not a valid component name try to find any UUxtToggleStateComponent on the actor.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >=2
+				ActorToSearch = ComponentReference.OtherActor.Get();
+#else
 				ActorToSearch = ComponentReference.OtherActor;
+#endif
 				ToggleState = Cast<UUxtToggleStateComponent>(ActorToSearch->GetComponentByClass(UUxtToggleStateComponent::StaticClass()));
 			}
 		}
