@@ -11,7 +11,14 @@
 class UUxtStaticHandPoseBindingsAsset;
 class UUxtStaticPoseDefinition;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FUxtStaticHandPoseKeyStateChangedDelegate, EUxtHandPoseKeySlot, Slot, bool, bIsPressed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+	FUxtStaticHandPoseKeyStateChangedDelegate,
+	EUxtHandPoseKeySlot,
+	Slot,
+	bool,
+	bIsPressed,
+	bool,
+	bIsLeftHand);
 
 UCLASS()
 class UXTOOLSHANDPOSE_API UUxtStaticHandPoseSubsystem : public UEngineSubsystem

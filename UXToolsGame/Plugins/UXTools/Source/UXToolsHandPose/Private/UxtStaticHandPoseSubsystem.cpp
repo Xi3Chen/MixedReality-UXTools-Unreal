@@ -308,6 +308,7 @@ void UUxtStaticHandPoseSubsystem::UpdateBindingState(EUxtHandPoseKeySlot Slot, c
 	FBindingRuntimeState& RuntimeState = Entry->RuntimeState;
 	FUxtStaticHandPoseBindingDebugInfo& DebugInfo = Entry->DebugInfo;
 	const bool bWasPhysicallyPressed = RuntimeState.bPhysicallyPressed;
+	const EControllerHand PreviousTriggeringHand = RuntimeState.TriggeringHand;
 	const FUxtStaticHandPoseBinding* Binding = ActiveBindingsAsset->GetBinding(Slot);
 	if (!Binding)
 	{
@@ -390,7 +391,8 @@ void UUxtStaticHandPoseSubsystem::UpdateBindingState(EUxtHandPoseKeySlot Slot, c
 	DebugInfo.TriggeringHand = RuntimeState.TriggeringHand;
 	if (bWasPhysicallyPressed != RuntimeState.bPhysicallyPressed)
 	{
-		OnKeyStateChange.Broadcast(Slot, RuntimeState.bPhysicallyPressed);
+		const EControllerHand BroadcastHand = RuntimeState.bPhysicallyPressed ? RuntimeState.TriggeringHand : PreviousTriggeringHand;
+		OnKeyStateChange.Broadcast(Slot, RuntimeState.bPhysicallyPressed, BroadcastHand == EControllerHand::Left);
 	}
 	FUXToolsHandPoseModule::Get().SetKeyPressed(DebugInfo.Key, RuntimeState.bPhysicallyPressed);
 }
