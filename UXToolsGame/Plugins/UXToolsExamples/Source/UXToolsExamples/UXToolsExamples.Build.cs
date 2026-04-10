@@ -26,7 +26,9 @@ public class UXToolsExamples : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core"
+				"Core",
+				"HeadMountedDisplay",
+				"UXToolsHandPose"
 			}
 			);
 			
@@ -38,7 +40,8 @@ public class UXToolsExamples : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"UXTools"
+				"UXTools",
+				"XRBase"
 			}
 			);
 		
