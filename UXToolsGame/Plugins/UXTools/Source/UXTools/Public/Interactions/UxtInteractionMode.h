@@ -16,6 +16,11 @@ enum class EUxtInteractionMode : uint8
 	Near = 1 << 0,
 	/** Interact with far targets (see IUxtFarTarget) */
 	Far = 1 << 1,
+	/** Interact with head orientation targets (see IUxtHeadOrientationTarget).
+	  * NOTE: HeadOrientation cannot be used together with Near or Far modes.       */
+	HeadOrientation = 1 << 2,
+	/** When using head-orientation/eye-based interactions, force the gaze ray to use HMD fallback tracking. */
+	ForceHmdTracker = 1 << 3,
 };
 ENUM_CLASS_FLAGS(EUxtInteractionMode)
 

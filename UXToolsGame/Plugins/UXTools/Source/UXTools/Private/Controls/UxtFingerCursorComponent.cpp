@@ -153,9 +153,16 @@ void UUxtFingerCursorComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 					PointerTransform = HandPointer->GetGrabPointerTransform();
 				}
 			}
-
-			SetWorldTransform(
-				GetCursorTransform(HandPointer->Hand, PointOnTarget, SurfaceNormal, Target ? AlignWithSurfaceDistance : -1.0f));
+			FTransform NewTransform = GetCursorTransform(HandPointer->Hand, PointOnTarget, SurfaceNormal, Target ? AlignWithSurfaceDistance : -1.0f);
+			if(NewTransform.IsValid())
+			{
+				SetWorldTransform(NewTransform);
+			}
+			else
+			{
+				return;
+			}
+				
 
 			float Alpha = 1.0f;
 

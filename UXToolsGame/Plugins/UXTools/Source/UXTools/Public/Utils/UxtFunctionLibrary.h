@@ -39,13 +39,13 @@ public:
 public:
 	/** When true, the methods in this class will use test data. Intended for tests and internal usage only. */
 	static bool bUseTestData;
-
+	
 	/** When true, the methods in this class will use simulated data. Intended for the XRSimulation input sim usage only. */
 	static bool bUseInputSim;
 
 	/** When bUseTestData is true, GetHeadPose will return this transform. */
 	static FTransform TestHeadPose;
-
+	
 	/** When bUseInputSim is true and bUseTestData is false, GetHeadPose will return this transform. */
 	static FTransform SimulatedHeadPose;
 };

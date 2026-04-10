@@ -34,6 +34,7 @@ UUxtBackPlateComponent::UUxtBackPlateComponent()
 
 	// Set the default backplate scale to 16x32x32mm.
 	SetRelativeScale3D(FVector(DefaultBackPlateDepth, DefaultBackPlateSize, DefaultBackPlateSize));
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
 }
 
 #if WITH_EDITOR

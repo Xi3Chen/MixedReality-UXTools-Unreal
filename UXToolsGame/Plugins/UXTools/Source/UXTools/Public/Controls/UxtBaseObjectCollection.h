@@ -23,6 +23,7 @@ class UXTOOLS_API UUxtBaseObjectCollection : public USceneComponent
 	GENERATED_BODY()
 
 public:
+	UUxtBaseObjectCollection();
 	/** Set the the callback function to be used by the sort to compare actor pairs.
 	 *	In order to see results of sorting with the editor it is necessary to enable run in editor in the functions details panel.
 	 */

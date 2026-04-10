@@ -17,7 +17,7 @@ void UUxtFixedRotationToUserConstraint::Initialize(const FTransform& WorldPose)
 	{
 		CameraRotation.Roll = 0.0f;
 	}
-
+	
 	StartObjectRotationCameraSpace = CameraRotation.Quaternion().Inverse() * WorldPose.GetRotation();
 }
 

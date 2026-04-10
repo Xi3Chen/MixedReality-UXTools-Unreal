@@ -67,6 +67,10 @@ FBoxSphereBounds UUxtMathUtilsFunctionLibrary::CalculateHierarchyBounds(
 		(Filter != nullptr && Filter(Component)) ? Component->CalcBounds(LocalToTarget) : FBoxSphereBounds(EForceInit::ForceInit);
 	for (USceneComponent* Child : Component->GetAttachChildren())
 	{
+		if (!Child)
+		{
+			continue;
+		}
 		FTransform ChildLocalToParent = Child->GetRelativeTransform() * LocalToTarget;
 		Bounds = Bounds + CalculateHierarchyBounds(Child, ChildLocalToParent, Filter);
 	}

@@ -8,6 +8,7 @@
 #include "InputCoreTypes.h"
 #include "UxtPointerComponent.h"
 
+
 #include "Components/ActorComponent.h"
 #include "Materials/MaterialParameterCollection.h"
 
@@ -18,6 +19,7 @@ class UPrimitiveComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUxtFarPointerEnabledDelegate, UUxtFarPointerComponent*, FarPointer);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUxtFarPointerDisabledDelegate, UUxtFarPointerComponent*, FarPointer);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams (FUxtOnFarPointerPoseUpdated, UUxtFarPointerComponent*,FarPointer,FVector,PointerOrigin,FQuat,Orientation);
 
 /**
  * Component that casts a ray for the given hand-tracked hand and raises far interaction events on the far targets hit.
@@ -78,10 +80,10 @@ public:
 	virtual UObject* GetFocusTarget() const override;
 	virtual FTransform GetCursorTransform() const override;
 
-private:
+protected:
 	/** Called every tick to update the pointer pose with the latest information from the hand tracker. */
-	void OnPointerPoseUpdated(const FQuat& NewOrientation, const FVector& NewOrigin);
-
+	virtual void OnPointerPoseUpdated(const FQuat& NewOrientation, const FVector& NewOrigin);
+	FVector ComputeRayPivotPosition(FVector handPosition, FTransform headTransform, const EControllerHand DeviceHand) const;
 	/** Called every tick to update the pressed state with the latest information from the hand tracker. */
 	void SetPressed(bool bNewPressed);
 
@@ -114,7 +116,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Uxt Far Pointer")
 	FUxtFarPointerDisabledDelegate OnFarPointerDisabled;
 
-private:
+	UPROPERTY(BlueprintAssignable, Category = "Uxt Far Pointer")
+	FUxtOnFarPointerPoseUpdated FOnFarPointerPoseUpdated;
+	
+protected:
 	void UpdateParameterCollection(FVector IndexTipPosition);
 
 	/** Parameter collection used to store the finger tip position */
@@ -137,7 +142,12 @@ private:
 
 	/** Far target that owns the hit primitive, if any. */
 	TWeakObjectPtr<UObject> FarTargetWeak;
-
+	// Constants from Shell Implementation of hand ray.
+	float DynamicPivotBaseY = -10.0f, DynamicPivotMultiplierY = 0.65f, DynamicPivotMinY = -60.0f, DynamicPivotMaxY = -20.0f;
+	float DynamicPivotBaseX = 3.0f, DynamicPivotMultiplierX = 0.65f, DynamicPivotMinX = 8.0f, DynamicPivotMaxX = 15.0f;
+	float HeadToPivotOffsetZ = 8.0f;
+	float CursorBeamBackwardTolerance = 0.5f;
+	float CursorBeamUpTolerance = 0.8f;
 	bool bPressed = false;
 
 	bool bEnabled = false;

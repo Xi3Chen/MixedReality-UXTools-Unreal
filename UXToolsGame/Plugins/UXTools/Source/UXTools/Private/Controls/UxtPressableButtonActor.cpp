@@ -139,6 +139,8 @@ AUxtPressableButtonActor::AUxtPressableButtonActor()
 #if WITH_EDITORONLY_DATA
 	AudioComponent->bVisualizeComponent = false; // Avoids audio icon occlusion of the button visuals in the editor.
 #endif
+	PrimaryActorTick.TickGroup = ETickingGroup::TG_LastDemotable;
+
 }
 
 void AUxtPressableButtonActor::OnConstruction(const FTransform& Transform)

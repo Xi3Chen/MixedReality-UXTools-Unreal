@@ -71,6 +71,8 @@ UUxtScrollingObjectCollection::UUxtScrollingObjectCollection()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
+
 	bAutoActivate = true;
 
 	// ...

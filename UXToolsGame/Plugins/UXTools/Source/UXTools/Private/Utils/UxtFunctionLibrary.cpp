@@ -5,8 +5,10 @@
 
 #include "AudioDevice.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
+#include "UxtTrackingControllerSubsystem.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "Camera/CameraComponent.h"
 #if WITH_EDITOR
 #include "Editor/EditorEngine.h"
 #endif
@@ -22,7 +24,7 @@ FTransform UUxtFunctionLibrary::GetHeadPose(UObject* WorldContextObject)
 	{
 		return TestHeadPose;
 	}
-
+	
 	if (bUseInputSim)
 	{
 		return SimulatedHeadPose;
@@ -33,7 +35,15 @@ FTransform UUxtFunctionLibrary::GetHeadPose(UObject* WorldContextObject)
 	UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(Rotation, Position);
 
 	FTransform TrackingSpaceTransform(Rotation, Position);
-	FTransform TrackingToWorld = UHeadMountedDisplayFunctionLibrary::GetTrackingToWorldTransform(WorldContextObject);
+	FTransform TrackingToWorld;
+	if(UCameraComponent* CameraComponent = GEngine->GetEngineSubsystem<UUxtTrackingControllerSubsystem>()->GetPlayerFollowCameraComponent())
+	{
+		TrackingToWorld = CameraComponent->GetAttachParent()->GetComponentToWorld();
+	}
+	else
+	{
+		TrackingToWorld = UHeadMountedDisplayFunctionLibrary::GetTrackingToWorldTransform(WorldContextObject);
+	}
 
 	FTransform Result;
 	FTransform::Multiply(&Result, &TrackingSpaceTransform, &TrackingToWorld);

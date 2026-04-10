@@ -5,6 +5,12 @@
 
 #include "GameFramework/Actor.h"
 
+UUxtUIElementComponent::UUxtUIElementComponent()
+{
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
+
+}
+
 EUxtUIElementVisibility UUxtUIElementComponent::GetUIVisibilitySelf() const
 {
 	return Visibility;

@@ -136,7 +136,13 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Uxt Hand Constraint", meta = (ClampMin = "0.0"))
 	float RotationLerpTime = 0.05f;
-
+	/**
+	 * Give priority to relative spatial control of movement.
+	 * This ensures that no rendering errors occur when players move at high speeds.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Uxt Hand Constraint")
+	bool bPriorityRelativeSpace = false;
+	
 	/** Event raised when the constraint becomes active, as indicated by the bIsConstraintActive property. */
 	UPROPERTY(BlueprintAssignable, Category = "Uxt Hand Constraint")
 	FUxtHandConstraintActivatedDelegate OnConstraintActivated;
@@ -152,7 +158,7 @@ public:
 	/** Event raised when the constraint ends tracking a hand. */
 	UPROPERTY(BlueprintAssignable, Category = "Uxt Hand Constraint")
 	FUxtHandConstraintEndTrackingDelegate OnEndTracking;
-
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -209,4 +215,9 @@ private:
 	/** Goal rotation for the constraint. */
 	UPROPERTY(Transient, Category = "Uxt Hand Constraint", BlueprintGetter = GetGoalRotation)
 	FQuat GoalRotation;
+
+	bool HasTrackingOriginComponent()const;
+	USceneComponent* GetTrackingOriginComponent()const;
+	const FTransform& GetTrackingOriginComponentTransform()const;
+	bool TryGetReltiveTransformFromTrackingOriginComponent(FTransform& OutTransform)const;
 };

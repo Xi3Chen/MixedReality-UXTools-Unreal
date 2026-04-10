@@ -27,6 +27,7 @@ class UXTOOLS_API UUxtTouchBasedHandTrackerComponent
 	GENERATED_BODY()
 
 public:
+	UUxtTouchBasedHandTrackerComponent();
 	//
 	// IUxtHandTracker interface
 

@@ -30,7 +30,8 @@ public:
 	bool IsHeadMovementEnabled() const;
 	UFUNCTION(BlueprintSetter, Category = "XRSimulation")
 	void SetHeadMovementEnabled(bool bEnable);
-
+	UFUNCTION(BlueprintCallable)
+	void ResetRotationAndLocation(FVector Location,FRotator Rotation);
 private:
 	/** Apply and reset accumulated rotation input. */
 	void ApplyRotationInput(float DeltaTime);

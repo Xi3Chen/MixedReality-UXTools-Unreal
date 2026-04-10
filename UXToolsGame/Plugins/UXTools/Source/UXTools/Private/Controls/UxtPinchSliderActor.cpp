@@ -128,6 +128,7 @@ AUxtPinchSliderActor::AUxtPinchSliderActor()
 	ThumbScaleCurve = DefaultThumbScaleCurve.Object;
 
 	ScaleTimelineCallback.BindDynamic(this, &AUxtPinchSliderActor::OnUpdateTimeline);
+	PrimaryActorTick.TickGroup = ETickingGroup::TG_LastDemotable;
 }
 
 void AUxtPinchSliderActor::SetValue(float NewValue)

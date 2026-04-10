@@ -33,7 +33,11 @@ private:
 	void OnGameModePostLogin(AGameModeBase* GameMode, APlayerController* NewPlayer);
 	void OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting);
 
+	/** Creates or returns the existing input simulation actor, attached to the given player controller. */
 	AXRSimulationActor* GetOrCreateInputSimActor(APlayerController* PlayerController);
+
+	/** Creates or returns the existing input simulation actor, attached to the given pawn. */
+	AXRSimulationActor* GetOrCreateInputSimActor(APawn* TargetPawn);
 	void DestroyInputSimActor();
 
 	AActor* GetOrCreateHmdCameraActor(APlayerController* PlayerController);

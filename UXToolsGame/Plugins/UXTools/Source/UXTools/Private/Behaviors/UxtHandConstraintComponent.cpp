@@ -3,6 +3,8 @@
 
 #include "Behaviors/UxtHandConstraintComponent.h"
 
+#include "UxtTrackingControllerSubsystem.h"
+#include "Camera/CameraComponent.h"
 #include "Engine/World.h"
 #include "HandTracking/IUxtHandTracker.h"
 #include "Utils/UxtFunctionLibrary.h"
@@ -162,11 +164,18 @@ FVector UUxtHandConstraintComponent::GetZoneDirection(const FVector& HandLocatio
 	// Directions are for the left hand case
 	FVector DirectionUlnar;
 	FVector DirectionUp;
+	const FTransform& ToWord = GetTrackingOriginComponentTransform();
+
 	switch (OffsetMode)
 	{
 	case EUxtHandConstraintOffsetMode::LookAtCamera:
 	{
 		FTransform HeadPose = UUxtFunctionLibrary::GetHeadPose(GetWorld());
+		if (HasTrackingOriginComponent())
+		{
+			HeadPose = FTransform(ToWord.InverseTransformRotation(HeadPose.GetRotation()),
+			                      ToWord.InverseTransformPosition(HeadPose.GetLocation()));
+		}
 		FVector LookAtVector = HandLocation - HeadPose.GetLocation();
 		bool IsPalmFacingCamera = FVector::DotProduct(LookAtVector, HandRotation.GetUpVector()) > 0.0f;
 
@@ -205,7 +214,6 @@ FVector UUxtHandConstraintComponent::GetZoneDirection(const FVector& HandLocatio
 	case EUxtHandConstraintZone::BelowWrist:
 		return -DirectionUp;
 	}
-
 	return FVector::ZeroVector;
 }
 
@@ -238,10 +246,18 @@ void UUxtHandConstraintComponent::UpdateConstraint()
 		if (bMoveOwningActor && GetOwner())
 		{
 			// When activating snap to the goal
-			GetOwner()->SetActorLocation(GoalLocation);
-			GetOwner()->SetActorRotation(GoalRotation);
+			if(HasTrackingOriginComponent())
+			{
+				GetOwner()->SetActorLocation(GetTrackingOriginComponentTransform().TransformPosition(GoalLocation));
+				GetOwner()->SetActorRotation(GetTrackingOriginComponentTransform().TransformRotation(GoalRotation));
+			}
+			else
+			{
+				GetOwner()->SetActorLocation(GoalLocation);
+				GetOwner()->SetActorRotation(GoalRotation);
+			}
+			
 		}
-
 		// Activate constraint
 		OnConstraintActivated.Broadcast();
 		OnBeginTracking.Broadcast(TrackedHand);
@@ -263,12 +279,20 @@ void UUxtHandConstraintComponent::UpdateConstraint()
 bool UUxtHandConstraintComponent::UpdateTrackedHand(FVector& OutPalmLocation, FQuat& OutPalmRotation)
 {
 	// Utility lambda for getting palm location and rotation of the TrackedHand, returns false if rejected.
-	auto GetValidTransformFromTrackedHand = [this, &OutPalmLocation, &OutPalmRotation]() -> bool
-	{
+	auto GetValidTransformFromTrackedHand = [this, &OutPalmLocation, &OutPalmRotation]() -> bool {
 		if (IsHandUsableForConstraint(TrackedHand))
 		{
 			float PalmRadius;
-			return IUxtHandTracker::Get().GetJointState(TrackedHand, EHandKeypoint::Palm, OutPalmRotation, OutPalmLocation, PalmRadius);
+			bool Success = IUxtHandTracker::Get().GetJointState(TrackedHand, EHandKeypoint::Palm, OutPalmRotation, OutPalmLocation, PalmRadius);
+
+
+			if (HasTrackingOriginComponent())
+			{
+				const FTransform& ToWorld = GetTrackingOriginComponentTransform();
+				OutPalmLocation = ToWorld.InverseTransformPosition(OutPalmLocation);
+				OutPalmRotation = ToWorld.InverseTransformRotation(OutPalmRotation);
+			}
+			return Success;
 		}
 		return false;
 	};
@@ -300,10 +324,10 @@ bool UUxtHandConstraintComponent::UpdateTrackedHand(FVector& OutPalmLocation, FQ
 
 bool UUxtHandConstraintComponent::UpdateHandBounds(const FVector& PalmLocation, const FQuat& PalmRotation)
 {
-	FTransform WorldFromPalm = FTransform(PalmRotation, PalmLocation);
+	FTransform WorldFromPalm = FTransform(PalmRotation,PalmLocation);
 	FTransform PalmFromWorld = WorldFromPalm.Inverse();
 	HandBounds = FBox(EForceInit::ForceInitToZero);
-
+	bool bUsingReltiveTransfrom = HasTrackingOriginComponent();
 	for (int i = 0; i < EHandKeypointCount; ++i)
 	{
 		EHandKeypoint Joint = (EHandKeypoint)i;
@@ -315,7 +339,10 @@ bool UUxtHandConstraintComponent::UpdateHandBounds(const FVector& PalmLocation, 
 		{
 			continue;
 		}
-
+		if(bUsingReltiveTransfrom)
+		{
+			JointLocation = GetTrackingOriginComponentTransform().InverseTransformPosition(JointLocation);
+		}
 		// Joint position in palm coordinates
 		FVector LocalLoc = PalmFromWorld.TransformPosition(JointLocation);
 		// Union with box around the joint, using radius for padding
@@ -349,16 +376,32 @@ bool UUxtHandConstraintComponent::UpdateGoal(const FVector& PalmLocation, const 
 	}
 
 	GoalLocation = PalmRotation.RotateVector(LocalHitLocation) + PalmLocation;
+	const FTransform& TrackingOriginToWorld = GetTrackingOriginComponentTransform();
+	FQuat Target;
 
 	switch (RotationMode)
 	{
 	case EUxtHandConstraintRotationMode::None:
-		GoalRotation = GetOwner() ? GetOwner()->GetActorTransform().GetRotation() : FQuat::Identity;
+		if(HasTrackingOriginComponent())
+		{
+			Target=TrackingOriginToWorld.InverseTransformRotation(GetOwner()->GetActorTransform().GetRotation());
+		}
+		else
+		{
+			Target=GetOwner()->GetActorTransform().GetRotation();
+		}
+		GoalRotation = GetOwner() ? Target : FQuat::Identity;
 		break;
 
 	case EUxtHandConstraintRotationMode::LookAtCamera:
 	{
 		FTransform HeadPose = UUxtFunctionLibrary::GetHeadPose(GetWorld());
+			if(HasTrackingOriginComponent())
+			{
+				HeadPose = FTransform(
+					TrackingOriginToWorld.InverseTransformRotation(HeadPose.GetRotation()),
+					TrackingOriginToWorld.InverseTransformPosition(HeadPose.GetLocation()));
+			}
 		GoalRotation = FRotationMatrix::MakeFromXZ(HeadPose.GetLocation() - GoalLocation, FVector::UpVector).ToQuat();
 		break;
 	}
@@ -368,7 +411,6 @@ bool UUxtHandConstraintComponent::UpdateGoal(const FVector& PalmLocation, const 
 		GoalRotation = PalmRotation * FRotator(-90, 0, 0).Quaternion();
 		break;
 	}
-
 	return true;
 }
 
@@ -376,8 +418,22 @@ void UUxtHandConstraintComponent::AddMovement(float DeltaTime)
 {
 	if (GetOwner())
 	{
-		FVector Location = GetOwner()->GetActorLocation();
-		FQuat Rotation = GetOwner()->GetActorQuat();
+		FVector Location;
+		FQuat Rotation;
+		const bool bHasTrackingOriginComponent = HasTrackingOriginComponent();
+		const FTransform& ToWorld = GetTrackingOriginComponentTransform();
+
+		if(bHasTrackingOriginComponent)
+		{
+			Location = ToWorld.InverseTransformPosition( GetOwner()->GetActorLocation());
+			Rotation = ToWorld.InverseTransformRotation(GetOwner()->GetActorQuat());
+		}
+		else
+		{
+			Location = GetOwner()->GetActorLocation();
+			Rotation= GetOwner()->GetActorQuat();
+		}
+		
 
 		FVector SmoothLoc;
 		if (LocationLerpTime <= KINDA_SMALL_NUMBER)
@@ -400,8 +456,62 @@ void UUxtHandConstraintComponent::AddMovement(float DeltaTime)
 			float Weight = FMath::Clamp(1.0f - FMath::Exp(-DeltaTime / RotationLerpTime), 0.0f, 1.0f);
 			SmoothRot = FMath::Lerp(Rotation, GoalRotation, Weight);
 		}
+		if(bHasTrackingOriginComponent)
+		{
+			SmoothLoc = ToWorld.TransformPosition(SmoothLoc);
+			SmoothRot = ToWorld.TransformRotation(SmoothRot);
+		}
 
 		GetOwner()->SetActorLocation(SmoothLoc);
 		GetOwner()->SetActorRotation(SmoothRot);
 	}
+}
+
+bool UUxtHandConstraintComponent::HasTrackingOriginComponent() const
+{
+	if (bPriorityRelativeSpace)
+	{
+		if (auto CameraComponent = GEngine->GetEngineSubsystem<UUxtTrackingControllerSubsystem>()->
+											GetPlayerFollowCameraComponent())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+USceneComponent* UUxtHandConstraintComponent::GetTrackingOriginComponent() const
+{
+	if (bPriorityRelativeSpace)
+	{
+		if (auto CameraComponent = GEngine->GetEngineSubsystem<UUxtTrackingControllerSubsystem>()->
+		                                    GetPlayerFollowCameraComponent())
+		{
+			return CameraComponent->GetAttachParent();
+		}
+	}
+	return GetOwner()->GetRootComponent();
+}
+
+const FTransform& UUxtHandConstraintComponent::GetTrackingOriginComponentTransform() const
+{
+	return GetTrackingOriginComponent()->GetComponentTransform();
+}
+
+bool UUxtHandConstraintComponent::TryGetReltiveTransformFromTrackingOriginComponent(FTransform& OutTransform) const
+{
+	if (bPriorityRelativeSpace)
+	{
+		if (auto CameraComponent = GEngine->GetEngineSubsystem<UUxtTrackingControllerSubsystem>()->
+											GetPlayerFollowCameraComponent())
+		{
+			const FTransform& ToWorldTransForm = CameraComponent->GetAttachParent()->GetComponentTransform();
+			OutTransform = FTransform(ToWorldTransForm.InverseTransformRotation(GetOwner()->GetActorQuat()),
+					  ToWorldTransForm.InverseTransformPosition(GetOwner()->GetActorLocation()),
+					  ToWorldTransForm.InverseTransformVector(GetOwner()->GetActorScale()));
+			return true;
+		}
+	}
+	OutTransform = GetOwner()->GetRootComponent()->GetComponentTransform();
+	return false;
 }

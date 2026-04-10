@@ -2,10 +2,10 @@
 // Licensed under the MIT License.
 
 #include "Input/UxtFarPointerComponent.h"
-
+#include "IXRTrackingSystem.h"
 #include "CollisionQueryParams.h"
 #include "UXTools.h"
-
+#include "Math/UnrealMathUtility.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/World.h"
 #include "HandTracking/IUxtHandTracker.h"
@@ -16,6 +16,10 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Utils/UxtFunctionLibrary.h"
 #include "VisualLogger/VisualLogger.h"
+#include <Runtime/Engine/Classes/Kismet/KismetMathLibrary.h>
+
+#include "IHeadMountedDisplay.h"
+#include "Camera/CameraComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUxtFarPointer, Log, All);
 
@@ -25,7 +29,7 @@ UUxtFarPointerComponent::UUxtFarPointerComponent()
 	static ConstructorHelpers::FObjectFinder<UMaterialParameterCollection> Finder(TEXT("/UXTools/Materials/MPC_UXSettings"));
 	ParameterCollection = Finder.Object;
 	// Tick before controls
-	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PrePhysics;
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
 }
 
 void UUxtFarPointerComponent::SetActive(bool bNewActive, bool bReset)
@@ -38,6 +42,45 @@ void UUxtFarPointerComponent::SetActive(bool bNewActive, bool bReset)
 	}
 }
 
+FVector UUxtFarPointerComponent::ComputeRayPivotPosition(FVector handPosition, FTransform headTransform, const EControllerHand DeviceHand) const
+{
+	FTransform TargetTransform;  
+
+	FVector WorldPoint = FVector(1, 2, 3);  
+
+	FVector handPositionHeadSpace = headTransform.InverseTransformPosition(handPosition);
+
+	float relativePivotY = DynamicPivotBaseY + FMath::Min(DynamicPivotMultiplierY * handPositionHeadSpace.Y, (float)0);
+	relativePivotY = FMath::Clamp(relativePivotY, DynamicPivotMinY, DynamicPivotMaxY);
+
+	float xBase = DynamicPivotBaseX;
+	float xMultiplier = DynamicPivotMultiplierX;
+	float xMin = DynamicPivotMinX;
+	float xMax = DynamicPivotMaxX;
+	if (DeviceHand == EControllerHand::Left)
+	{
+		xBase = -xBase;
+		float tmp = xMin;
+		xMin = -xMax;
+		xMax = tmp;
+	}
+	float relativePivotX = xBase + xMultiplier * handPositionHeadSpace.Y;
+	relativePivotX = FMath::Clamp(relativePivotX, xMin, xMax);
+
+	FVector relativePivot = FVector(
+		HeadToPivotOffsetZ,
+		relativePivotX,
+		relativePivotY
+	);
+
+
+	FRotator EulerRotation(0, headTransform.Rotator().Yaw, 0);  
+
+	FQuat headRotationFlat = EulerRotation.Quaternion();
+
+	return headTransform.GetLocation() + headRotationFlat * relativePivot;
+}
+
 void UUxtFarPointerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -45,7 +88,25 @@ void UUxtFarPointerComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	// Obtain new pointer origin and orientation
 	FQuat NewOrientation;
 	FVector NewOrigin;
+	FTransform CameraTransform;
+
+	
 	const bool bIsTracked = IUxtHandTracker::Get().GetPointerPose(Hand, NewOrientation, NewOrigin);
+	
+	FQuat Orientation;
+	FVector Position;
+	//IXRTrackingSystem* XRTrackingSystem = GEngine->XRSystem.Get();
+	//XRTrackingSystem->GetCurrentPose(IXRTrackingSystem::HMDDeviceId, Orientation, Position);
+	//FVector Scale(1.0f, 1.0f, 1.0f);  // ����ֵ
+
+	//FTransform hmdTransform(Orientation, Position, Scale);
+	//FVector privot = ComputeRayPivotPosition(NewOrigin, hmdTransform, Hand);
+
+	//FVector Direction = NewOrigin - privot;
+	// UE_LOG(
+	// 	UXTools, Error, TEXT("TickComponent GetCurrentPose Orientation.X = %f.Y = %f"), Orientation.X, Orientation.Y);
+	//UE_LOG(UXTools, Error, TEXT("eddy -TickComponent Direction.vector = %f,%f,%f"), Direction.X, Direction.Y, Direction.Z);
+//	NewOrientation = Direction.Rotation().Quaternion();//Orientation.Rotator();//
 	if (bIsTracked)
 	{
 		OnPointerPoseUpdated(NewOrientation, NewOrigin);
@@ -107,15 +168,14 @@ static UObject* FindFarTarget(UPrimitiveComponent* Primitive)
 
 	return nullptr;
 }
-
+ 
 void UUxtFarPointerComponent::OnPointerPoseUpdated(const FQuat& NewOrientation, const FVector& NewOrigin)
 {
 	PointerOrientation = NewOrientation;
 	PointerOrigin = NewOrigin;
-
+	FOnFarPointerPoseUpdated.Broadcast(this,PointerOrigin,PointerOrientation);
 	UPrimitiveComponent* OldPrimitive = GetHitPrimitive();
 	UPrimitiveComponent* NewPrimitive;
-
 	if (bFocusLocked)
 	{
 		NewPrimitive = OldPrimitive;
@@ -141,9 +201,11 @@ void UUxtFarPointerComponent::OnPointerPoseUpdated(const FQuat& NewOrientation, 
 		const FVector Forward = PointerOrientation.GetForwardVector();
 		FVector Start = PointerOrigin + Forward * RayStartOffset;
 		FVector End = Start + Forward * RayLength;
-
+		// UE_LOG(
+		// 	UXTools, Warning, TEXT("OnPointerPoseUpdated Forward = %F."), Forward.X, Forward.Y);
 		// Query for simple collision volumes
 		FCollisionQueryParams QueryParams(NAME_None, false);
+		
 		GetWorld()->LineTraceSingleByChannel(Hit, Start, End, TraceChannel, QueryParams);
 
 		NewPrimitive = Hit.GetComponent();

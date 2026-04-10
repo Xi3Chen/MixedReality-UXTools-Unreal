@@ -29,12 +29,41 @@ namespace UxtHandTrackerInputActions
 class FUxtDefaultHandTracker : public IUxtHandTracker
 {
 public:
+	enum class HandJointID : uint8
+	{
+		Wrist,
+		Palm,
+		ThumbMetacarpal,
+		ThumbProximal,
+		ThumbDistal,
+		ThumbTip,
+		IndexMetacarpal,
+		IndexProximal,//6
+		IndexMiddle,
+		IndexDistal,
+		IndexTip,
+		MiddleMetacarpal,
+		MiddleProximal,//10
+		MiddleMiddle,
+		MiddleDistal,
+		MiddleTip,
+		RingMetacarpal,
+		RingProximal,
+		RingMiddle,
+		RingDistal,
+		RingTip,
+		PinkyMetacarpal,
+		PinkyProximal,
+		PinkyMiddle,
+		PinkyDistal,
+		PinkyTip
+	};
 	static void RegisterInputMappings();
 	static void UnregisterInputMappings();
 
 	FXRMotionControllerData& GetControllerData(EControllerHand Hand);
 	const FXRMotionControllerData& GetControllerData(EControllerHand Hand) const;
-
+    int32 ConvertMRTKJointToXvXRJoint(EHandKeypoint joint) const;
 	//
 	// IUxtHandTracker interface
 
@@ -54,6 +83,7 @@ private:
 	bool bIsSelectPressed_Left = false;
 	bool bIsGrabbing_Right = false;
 	bool bIsSelectPressed_Right = false;
-
+    bool isPinching = false;
 	friend class UUxtDefaultHandTrackerSubsystem;
+	static bool TransformConverterToFollowCamera(FQuat& OutOrientation, FVector& OutPosition);
 };

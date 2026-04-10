@@ -64,6 +64,9 @@ public:
 	/** Function used to set the text without creating a new widget class.*/
 	UFUNCTION(BlueprintCallable, Category = "Uxt Tooltip - Experimental")
 	void SetText(const FText& Text);
+	
+	UFUNCTION(BlueprintCallable, Category = "Uxt Tooltip - Experimental")
+	UUserWidget* GetUserWidget()const;
 
 	/** The widget rendered by this tooltip. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Uxt Tooltip - Experimental")
@@ -72,7 +75,6 @@ public:
 	/** An offset on the target position. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Uxt Tooltip - Experimental")
 	USceneComponent* Anchor = nullptr;
-
 protected:
 	//
 	// AActor interface

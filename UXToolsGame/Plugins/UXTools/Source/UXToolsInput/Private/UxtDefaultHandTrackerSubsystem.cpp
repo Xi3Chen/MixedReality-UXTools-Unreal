@@ -18,6 +18,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Utils/UxtFunctionLibrary.h"
+DEFINE_LOG_CATEGORY_STATIC(LogUUxtDefaultHandTrackerSubsystem, Log, All);
+
 
 void UUxtDefaultHandTrackerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {

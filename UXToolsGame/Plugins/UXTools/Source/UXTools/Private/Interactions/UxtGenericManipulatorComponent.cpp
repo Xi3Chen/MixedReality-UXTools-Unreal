@@ -18,8 +18,9 @@ UUxtGenericManipulatorComponent::UUxtGenericManipulatorComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
 	bAutoActivate = true;
-
+	
 	// Default values
 	OneHandRotationMode = EUxtOneHandRotationMode::RotateAboutGrabPoint;
 	TwoHandTransformModes = static_cast<int32>(EUxtTransformMode::Translation | EUxtTransformMode::Rotation | EUxtTransformMode::Scaling);

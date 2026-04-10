@@ -25,6 +25,7 @@ class UXTOOLS_API UUxtToggleStateComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
+	UUxtToggleStateComponent();
 	/** Mutates the checked flag and broadcasts events if the state changes.  */
 	UFUNCTION(BlueprintSetter, Category = "Uxt Toggle State")
 	void SetIsChecked(bool IsChecked);

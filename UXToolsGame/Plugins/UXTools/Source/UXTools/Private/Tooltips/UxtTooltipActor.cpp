@@ -76,6 +76,7 @@ AUxtTooltipActor::AUxtTooltipActor(const FObjectInitializer& ObjectInitializer) 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	SetActorTickEnabled(true);
+	PrimaryActorTick.TickGroup = ETickingGroup::TG_LastDemotable;
 }
 
 void AUxtTooltipActor::OnConstruction(const FTransform& Transform)
@@ -112,6 +113,11 @@ void AUxtTooltipActor::SetText(const FText& Text)
 	TooltipWidgetComponent->SetWidgetClass(nullptr);
 	TooltipWidgetComponent->SetWidget(nullptr);
 	TooltipWidgetComponent->SetSlateWidget(SNew(STextBlock).Text(Text));
+}
+
+UUserWidget* AUxtTooltipActor::GetUserWidget() const
+{
+	return TooltipWidgetComponent->GetWidget();
 }
 
 FVector AUxtTooltipActor::GetClosestAnchorToTarget(FVector EndPosition) const
@@ -201,7 +207,12 @@ void AUxtTooltipActor::UpdateSpline()
 
 		if (bIsAutoAnchoring)
 		{
-			StartPivotPos = GetClosestAnchorToTarget(EndPivotPos);
+			// The tooltip doesn't return the correct size until it has been rendered at least once. This coincides with the creation of the
+			// render target.
+			if (TooltipWidgetComponent->GetRenderTarget())
+			{
+				StartPivotPos = GetClosestAnchorToTarget(EndPivotPos);
+			}
 		}
 
 		FVector StartSplinePos = PivotToSplineTransf.TransformPositionNoScale(StartPivotPos);

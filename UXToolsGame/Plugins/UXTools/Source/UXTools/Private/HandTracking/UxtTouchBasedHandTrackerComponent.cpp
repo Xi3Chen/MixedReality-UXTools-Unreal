@@ -35,6 +35,11 @@ void UUxtTouchBasedHandTrackerComponent::EndPlay(const EEndPlayReason::Type EndP
 	Super::EndPlay(EndPlayReason);
 }
 
+UUxtTouchBasedHandTrackerComponent::UUxtTouchBasedHandTrackerComponent()
+{
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
+}
+
 ETrackingStatus UUxtTouchBasedHandTrackerComponent::GetTrackingStatus(EControllerHand Hand) const
 {
 	return IsTouchPressed(Hand) ? ETrackingStatus::Tracked : ETrackingStatus::NotTracked;

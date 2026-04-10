@@ -3,8 +3,12 @@
 
 #include "UxtDefaultHandTracker.h"
 
+#include "IXRTrackingSystem.h"
+#include "UxtTrackingControllerSubsystem.h"
+#include "Camera/CameraComponent.h"
 #include "Features/IModularFeatures.h"
 #include "GameFramework/InputSettings.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUxtDefaultHandTracker, Log, All);
 
@@ -104,6 +108,46 @@ bool FUxtDefaultHandTracker::IsHandController(EControllerHand Hand) const
 	const FXRMotionControllerData& MotionControllerData = GetControllerData(Hand);
 	return IsValidHandData(MotionControllerData);
 }
+  int32 FUxtDefaultHandTracker::ConvertMRTKJointToXvXRJoint(EHandKeypoint joint) const
+{
+	  switch (joint)
+	  {
+	  case EHandKeypoint::Palm: return (int32)HandJointID::Palm;//AttachmentPointFlags.Palm;
+	  case EHandKeypoint::Wrist: return (int32)HandJointID::Wrist;//AttachmentPointFlags.Wrist;
+
+	  case EHandKeypoint::ThumbProximal: return (int32)HandJointID::ThumbProximal;//AttachmentPointFlags.ThumbProximalJoint;
+	  case EHandKeypoint::ThumbDistal: return (int32)HandJointID::ThumbDistal;//AttachmentPointFlags.ThumbDistalJoint;
+	  case EHandKeypoint::ThumbTip: return (int32)HandJointID::ThumbTip;//AttachmentPointFlags.ThumbTip;
+	  case EHandKeypoint::ThumbMetacarpal: return (int32)HandJointID::ThumbMetacarpal;
+
+	  case EHandKeypoint::IndexMetacarpal: return (int32)HandJointID::IndexMetacarpal;//AttachmentPointFlags.IndexKnuckle;
+	  case EHandKeypoint::IndexProximal: return (int32)HandJointID::IndexProximal;//AttachmentPointFlags.IndexKnuckle;
+	  case EHandKeypoint::IndexIntermediate: return (int32)HandJointID::IndexMiddle;//.IndexMiddleJoint;
+	  case EHandKeypoint::IndexDistal: return (int32)HandJointID::IndexDistal;//AttachmentPointFlags.IndexDistalJoint;
+	  case EHandKeypoint::IndexTip: return (int32)HandJointID::IndexTip;//AttachmentPointFlags.IndexTip;
+
+	  case EHandKeypoint::MiddleMetacarpal: return (int32)HandJointID::MiddleMetacarpal;
+	  case EHandKeypoint::MiddleProximal: return (int32)HandJointID::MiddleProximal;//AttachmentPointFlags.MiddleKnuckle;
+	  case EHandKeypoint::MiddleIntermediate: return (int32)HandJointID::MiddleMiddle;//AttachmentPointFlags.MiddleMiddleJoint;
+	  case EHandKeypoint::MiddleDistal: return (int32)HandJointID::MiddleDistal;//AttachmentPointFlags.MiddleDistalJoint;
+	  case EHandKeypoint::MiddleTip: return (int32)HandJointID::MiddleTip;//AttachmentPointFlags.MiddleTip;
+
+	  case EHandKeypoint::RingMetacarpal: return (int32)HandJointID::RingMetacarpal;//AttachmentPointFlags.RingKnuckle;
+	  case EHandKeypoint::RingProximal: return (int32)HandJointID::RingProximal;//AttachmentPointFlags.RingKnuckle;
+	  case EHandKeypoint::RingIntermediate: return (int32)HandJointID::RingMiddle;//AttachmentPointFlags.RingMiddleJoint;
+	  case EHandKeypoint::RingDistal: return (int32)HandJointID::RingDistal;//AttachmentPointFlags.RingDistalJoint;
+	  case EHandKeypoint::RingTip: return (int32)HandJointID::RingTip;//AttachmentPointFlags.RingTip;
+
+	  case EHandKeypoint::LittleProximal: return (int32)HandJointID::PinkyProximal;//AttachmentPointFlags.PinkyKnuckle;
+	  case EHandKeypoint::LittleIntermediate: return (int32)HandJointID::PinkyMiddle;//AttachmentPointFlags.PinkyMiddleJoint;
+	  case EHandKeypoint::LittleDistal: return (int32)HandJointID::PinkyDistal;//AttachmentPointFlags.PinkyDistalJoint;
+	  case EHandKeypoint::LittleTip: return (int32)HandJointID::PinkyTip;//AttachmentPointFlags.PinkyTip;
+	  case EHandKeypoint::LittleMetacarpal: return (int32)HandJointID::PinkyMetacarpal;
+
+		  // Metacarpals are not included in AttachmentPointFlags
+	  default: return (int32)HandJointID::Palm;//AttachmentPointFlags.Wrist;
+	  }
+}
 
 bool FUxtDefaultHandTracker::GetJointState(
 	EControllerHand Hand, EHandKeypoint Joint, FQuat& OutOrientation, FVector& OutPosition, float& OutRadius) const
@@ -114,8 +158,11 @@ bool FUxtDefaultHandTracker::GetJointState(
 		const int32 iJoint = (int32)Joint;
 		OutOrientation = MotionControllerData.HandKeyRotations[iJoint];
 		OutPosition = MotionControllerData.HandKeyPositions[iJoint];
-		OutRadius = MotionControllerData.HandKeyRadii[iJoint];
-		return true;
+		if(TransformConverterToFollowCamera(OutOrientation,OutPosition))
+		{
+			OutRadius = MotionControllerData.HandKeyRadii[iJoint];
+			return true;
+		}
 	}
 	return false;
 }
@@ -127,6 +174,8 @@ bool FUxtDefaultHandTracker::GetPointerPose(EControllerHand Hand, FQuat& OutOrie
 	{
 		OutOrientation = MotionControllerData.AimRotation;
 		OutPosition = MotionControllerData.AimPosition;
+		return TransformConverterToFollowCamera(OutOrientation,OutPosition);
+		// UE_LOG(LogUxtDefaultHandTracker, Error, TEXT("eddy FUxtDefaultHandTracker GetPointerPose OutOrientation x y = %f,%f,%f,%f"), OutOrientation.X, OutOrientation.Y, OutOrientation.Z, OutOrientation.W);
 		return true;
 	}
 	return false;
@@ -139,20 +188,54 @@ bool FUxtDefaultHandTracker::GetGripPose(EControllerHand Hand, FQuat& OutOrienta
 	{
 		OutOrientation = MotionControllerData.GripRotation;
 		OutPosition = MotionControllerData.GripPosition;
-		return true;
+		
+		return TransformConverterToFollowCamera(OutOrientation,OutPosition);
+
 	}
 	return false;
 }
 
 bool FUxtDefaultHandTracker::GetIsGrabbing(EControllerHand Hand, bool& OutIsGrabbing) const
 {
+	FQuat IndexRotation, RingRotation;
+	FVector IndexLocation, RingLocation;
+	float IndexRadius, RingRadius, distance;
+	bool res;
 	switch (Hand)
 	{
 	case EControllerHand::Left:
-		OutIsGrabbing = bIsGrabbing_Left;
+		res = GetJointState(EControllerHand::Left, EHandKeypoint::IndexTip, IndexRotation, IndexLocation, IndexRadius);
+		GetJointState(EControllerHand::Left, EHandKeypoint::ThumbTip, RingRotation, RingLocation, RingRadius);
+
+		distance = FVector::Dist(RingLocation, IndexLocation);
+
+		if (distance > 2.0f || !res)
+		{
+			OutIsGrabbing = false;
+
+		}
+		else if (distance < 2.0f)
+		{
+			OutIsGrabbing = true;
+		}
+	//	OutIsGrabbing = bIsGrabbing_Left;
 		return true;
 	case EControllerHand::Right:
-		OutIsGrabbing = bIsGrabbing_Right;
+		res = GetJointState(EControllerHand::Right, EHandKeypoint::IndexTip, IndexRotation, IndexLocation, IndexRadius);
+		GetJointState(EControllerHand::Right, EHandKeypoint::ThumbTip, RingRotation, RingLocation, RingRadius);
+
+		distance = FVector::Dist(RingLocation, IndexLocation);
+
+		if (distance > 2.0f || !res)
+		{
+			OutIsGrabbing = false;
+
+		}
+		else if (distance < 2.0f)
+		{
+			OutIsGrabbing = true;
+		}
+		//OutIsGrabbing = bIsGrabbing_Right;
 		return true;
 	}
 	return false;
@@ -160,14 +243,78 @@ bool FUxtDefaultHandTracker::GetIsGrabbing(EControllerHand Hand, bool& OutIsGrab
 
 bool FUxtDefaultHandTracker::GetIsSelectPressed(EControllerHand Hand, bool& OutIsSelectPressed) const
 {
+	FQuat IndexRotation, RingRotation;
+	FVector IndexLocation, RingLocation;
+	float IndexRadius, RingRadius, distance;
+	bool res;
 	switch (Hand)
 	{
 	case EControllerHand::Left:
-		OutIsSelectPressed = bIsSelectPressed_Left;
+	
+		 res = GetJointState(EControllerHand::Left, EHandKeypoint::IndexTip, IndexRotation, IndexLocation, IndexRadius);
+		GetJointState(EControllerHand::Left, EHandKeypoint::ThumbTip, RingRotation, RingLocation, RingRadius);
+		
+		 distance = FVector::Dist(RingLocation, IndexLocation);
+
+		if (distance > 2.0f || !res)
+		{
+			OutIsSelectPressed = false;
+		
+		}
+		else if (distance < 2.0f)
+		{
+			OutIsSelectPressed = true;
+		
+		}
+	//	OutIsSelectPressed = bIsSelectPressed_Left;
 		return true;
 	case EControllerHand::Right:
-		OutIsSelectPressed = bIsSelectPressed_Right;
+		res = GetJointState(EControllerHand::Right, EHandKeypoint::IndexTip, IndexRotation, IndexLocation, IndexRadius);
+		GetJointState(EControllerHand::Right, EHandKeypoint::ThumbTip, RingRotation, RingLocation, RingRadius);
+
+		 distance = FVector::Dist(RingLocation, IndexLocation);
+		//  UE_LOG(LogUxtDefaultHandTracker, Error, TEXT("eddy FUxtDefaultHandTracker GetIsSelectPressed distance = %f"), distance);
+		if (distance > 3.0f || !res)
+		{
+			OutIsSelectPressed = false;
+		}
+		else if (distance < 3.0f)
+		{
+			OutIsSelectPressed = true;
+		}
+	//	OutIsSelectPressed = bIsSelectPressed_Right;
 		return true;
+	}
+	return false;
+}
+
+bool FUxtDefaultHandTracker::TransformConverterToFollowCamera(FQuat& OutOrientation, FVector& OutPosition)
+{
+	if(OutOrientation.ContainsNaN() || OutPosition.ContainsNaN())
+	{
+		//ensureMsgf(0,TEXT("OutOrientation or OutPosition contain nan"));
+		return false;
+	}
+	if(auto PlayerFollowCameraComponent = GEngine->GetEngineSubsystem<UUxtTrackingControllerSubsystem>()->GetPlayerFollowCameraComponent())
+	{
+		APlayerController* PC = UGameplayStatics::GetPlayerController(PlayerFollowCameraComponent, 0);
+		if (PC != nullptr && PlayerFollowCameraComponent->IsActive() && PlayerFollowCameraComponent->GetOwner() ==
+			PC->GetViewTarget() && GEngine->XRSystem.
+			IsValid())
+		{
+			FTransform PointerTransform;
+
+			FTransform NewXRTransform = PlayerFollowCameraComponent->GetAttachParent()->GetComponentTransform();
+			FTransform XRToWorldTransform = GEngine->XRSystem->GetTrackingToWorldTransform();
+			PointerTransform.SetLocation(XRToWorldTransform.InverseTransformPosition(OutPosition));
+			PointerTransform.SetRotation(XRToWorldTransform.InverseTransformRotation(OutOrientation));
+			PointerTransform = PointerTransform*PlayerFollowCameraComponent->GetAttachParent()->GetComponentTransform();
+
+			OutOrientation = PointerTransform.GetRotation();
+			OutPosition = PointerTransform.GetLocation();
+			return true;
+		}
+		return false;
 	}
 	return false;
 }

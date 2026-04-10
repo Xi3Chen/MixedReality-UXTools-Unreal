@@ -50,6 +50,9 @@ protected:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
+	void RefreshActiveFarPointer();
+	void SetVisualEnabled(bool bEnabled);
+
 	UFUNCTION(Category = "Uxt Far Cursor")
 	void OnFarPointerEnabled(UUxtFarPointerComponent* FarPointer);
 
@@ -58,7 +61,10 @@ private:
 
 	void SetPressed(bool bNewPressed);
 
-	/** Far pointer in use. */
+	/** All far pointers found on the owner actor. */
+	TArray<TWeakObjectPtr<UUxtFarPointerComponent>> FarPointers;
+
+	/** Currently active far pointer in use. */
 	TWeakObjectPtr<UUxtFarPointerComponent> FarPointerWeak;
 
 	bool bPressed = false;

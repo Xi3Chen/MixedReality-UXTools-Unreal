@@ -77,6 +77,7 @@ private:
 		FWidgetPath& Path);
 
 public:
+	UUxtWidgetComponent();
 	/**
 	 * Represents the Virtual User Index.  Each virtual user should be represented by a different
 	 * index number, this will maintain separate capture and focus states for them.  Each

@@ -14,6 +14,7 @@
 class UProceduralMeshComponent;
 class UUxtNearPointerComponent;
 class UUxtFarPointerComponent;
+class UUxtEyePointerComponent;
 
 /**
  * Actor that drives hand interactions with components that implement the far, grab and poke target interfaces.
@@ -66,6 +67,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Uxt Hand Interaction")
 	FVector GetHandAngularVelocity() const { return AngularVelocity; }
 
+	
 	// Size of the hand activation cone in degrees
 	UPROPERTY(
 		EditAnywhere, BlueprintReadWrite, Category = "Uxt Hand Interaction", AdvancedDisplay, meta = (ClampMin = "0.0", ClampMax = "90.0"))
@@ -156,6 +158,9 @@ private:
 
 	UPROPERTY(Transient)
 	UUxtFarPointerComponent* FarPointer;
+
+	UPROPERTY(Transient)
+	UUxtEyePointerComponent* EyePointer;
 
 	/** Runtime mesh component used for detecting proximity of near interaction targets. */
 	UPROPERTY(Transient, VisibleAnywhere, Category = "Uxt Hand Interaction")

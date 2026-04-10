@@ -9,6 +9,7 @@
 #include "Controls/UxtFarCursorComponent.h"
 #include "Controls/UxtFingerCursorComponent.h"
 #include "HandTracking/IUxtHandTracker.h"
+#include "Input/UxtEyePointerComponent.h"
 #include "Input/UxtFarPointerComponent.h"
 #include "Input/UxtHandProximityMesh.h"
 #include "Input/UxtNearPointerComponent.h"
@@ -24,7 +25,7 @@ AUxtHandInteractionActor::AUxtHandInteractionActor(const FObjectInitializer& Obj
 {
 	PrimaryActorTick.bCanEverTick = true;
 	// Do not delay pointers' tick unnecessarily
-	PrimaryActorTick.TickGroup = ETickingGroup::TG_PrePhysics;
+	PrimaryActorTick.TickGroup = ETickingGroup::TG_PostUpdateWork;
 
 	SetActorEnableCollision(false);
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent")));
@@ -36,6 +37,10 @@ AUxtHandInteractionActor::AUxtHandInteractionActor(const FObjectInitializer& Obj
 	FarPointer = CreateDefaultSubobject<UUxtFarPointerComponent>(TEXT("FarPointer"));
 	FarPointer->PrimaryComponentTick.bStartWithTickEnabled = false;
 	FarPointer->AddTickPrerequisiteActor(this);
+
+	EyePointer = CreateDefaultSubobject<UUxtEyePointerComponent>(TEXT("EyePointer"));
+	EyePointer->PrimaryComponentTick.bStartWithTickEnabled = false;
+	EyePointer->AddTickPrerequisiteActor(this);
 
 	ProximityTrigger = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("ProximityTrigger"));
 	ProximityTrigger->bUseComplexAsSimpleCollision = false;
@@ -65,6 +70,12 @@ void AUxtHandInteractionActor::BeginPlay()
 	FarPointer->TraceChannel = TraceChannel;
 	FarPointer->RayStartOffset = RayStartOffset;
 	FarPointer->RayLength = RayLength;
+
+	EyePointer->Hand = Hand; // still used for pinch select source
+	EyePointer->TraceChannel = TraceChannel;
+	EyePointer->RayStartOffset = RayStartOffset;
+	EyePointer->RayLength = RayLength;
+	EyePointer->bForceHmdTracker = (InteractionMode & static_cast<int32>(EUxtInteractionMode::ForceHmdTracker)) != 0;
 
 	if (bUseDefaultNearCursor)
 	{
@@ -129,6 +140,7 @@ void AUxtHandInteractionActor::UpdateVelocity(float DeltaTime)
 {
 	FVector Position;
 	FQuat Orientation;
+	
 	if (IUxtHandTracker::Get().GetGripPose(Hand, Orientation, Position))
 	{
 		const FVector Normal = -Orientation.GetUpVector();
@@ -157,12 +169,12 @@ void AUxtHandInteractionActor::UpdateVelocity(float DeltaTime)
 bool AUxtHandInteractionActor::QueryProximityVolume(bool& OutHasNearTarget)
 {
 	OutHasNearTarget = false;
-
+//	UE_LOG(LogUxtHandTracking, Error, TEXT("eddy QueryProximityVolume entry"));
 	if (IUxtHandTracker::Get().GetTrackingStatus(Hand) == ETrackingStatus::NotTracked)
 	{
 		return false;
 	}
-
+//	UE_LOG(LogUxtHandTracking, Error, TEXT("eddy QueryProximityVolume entry 11"));
 	// If controller is a hand we use the proximity detection volume,
 	// otherwise near interaction is disabled and only far interaction used.
 	if (IUxtHandTracker::Get().IsHandController(Hand))
@@ -175,6 +187,10 @@ bool AUxtHandInteractionActor::QueryProximityVolume(bool& OutHasNearTarget)
 		const bool bIsPalmValid =
 			IUxtHandTracker::Get().GetJointState(Hand, EHandKeypoint::Palm, PalmOrientation, PalmPosition, PalmRadius);
 		// We've checked for valid hand data above
+		if(!(bIsIndexTipValid && bIsPalmValid))
+		{
+			return false;
+		}
 		check(bIsIndexTipValid && bIsPalmValid);
 
 		const FVector PalmForward = PalmOrientation.GetForwardVector();
@@ -224,6 +240,34 @@ void AUxtHandInteractionActor::Tick(float DeltaTime)
 	VLogHandJoints();
 #endif // ENABLE_VISUAL_LOG
 
+	// Mutual exclusion: when head-orientation mode is enabled, disable both near/far hand pointers.
+	const EUxtInteractionMode InteractionFlags = static_cast<EUxtInteractionMode>(InteractionMode);
+	if (EnumHasAnyFlags(InteractionFlags, EUxtInteractionMode::HeadOrientation))
+	{
+		EyePointer->bForceHmdTracker = EnumHasAnyFlags(InteractionFlags, EUxtInteractionMode::ForceHmdTracker);
+
+		if (NearPointer->IsActive())
+		{
+			NearPointer->SetActive(false);
+		}
+		if (FarPointer->IsActive())
+		{
+			FarPointer->SetActive(false);
+		}
+		if (!EyePointer->IsActive())
+		{
+			EyePointer->SetActive(true);
+		}
+
+		UpdateVelocity(DeltaTime);
+		return;
+	}
+
+	if (EyePointer->IsActive())
+	{
+		EyePointer->SetActive(false);
+	}
+
 	const bool bHasFocusLock = NearPointer->GetFocusLocked() || FarPointer->GetFocusLocked();
 
 	bool bNearInteractionFlag = InteractionMode & static_cast<int32>(EUxtInteractionMode::Near);
@@ -233,6 +277,11 @@ void AUxtHandInteractionActor::Tick(float DeltaTime)
 	{
 		return;
 	}
+	FTransform trans = GetActorTransform();
+	
+//	UE_LOG(LogUxtHandTracking, Error, TEXT("eddy AUxtHandInteractionActor tick trans.GetLocation X = %f, %f, %f"), trans.GetLocation().X, trans.GetLocation().Y, trans.GetLocation().Z);
+//	UE_LOG(LogUxtHandTracking, Error, TEXT("eddy AUxtHandInteractionActor tick trans.GetRotation X = %f, %f, %f"), trans.GetRotation().X, trans.GetRotation().Y, trans.GetRotation().Z);
+//	UE_LOG(LogUxtHandTracking, Error, TEXT("eddy AUxtHandInteractionActor tick trans.GetActorScale X = %f, %f, %f"), GetActorScale().X, GetActorScale().Y, GetActorScale().Z);
 
 	bool bNewNearPointerActive = NearPointer->IsActive();
 	bool bNewFarPointerActive = FarPointer->IsActive();
@@ -285,6 +334,7 @@ void AUxtHandInteractionActor::SetHand(EControllerHand NewHand)
 	Hand = NewHand;
 	NearPointer->Hand = NewHand;
 	FarPointer->Hand = NewHand;
+	EyePointer->Hand = NewHand;
 }
 
 void AUxtHandInteractionActor::SetTraceChannel(ECollisionChannel NewTraceChannel)
@@ -292,6 +342,7 @@ void AUxtHandInteractionActor::SetTraceChannel(ECollisionChannel NewTraceChannel
 	TraceChannel = NewTraceChannel;
 	NearPointer->TraceChannel = NewTraceChannel;
 	FarPointer->TraceChannel = NewTraceChannel;
+	EyePointer->TraceChannel = NewTraceChannel;
 }
 
 void AUxtHandInteractionActor::SetPokeRadius(float NewPokeRadius)
@@ -304,14 +355,17 @@ void AUxtHandInteractionActor::SetRayStartOffset(float NewRayStartOffset)
 {
 	RayStartOffset = NewRayStartOffset;
 	FarPointer->RayStartOffset = NewRayStartOffset;
+	EyePointer->RayStartOffset = NewRayStartOffset;
 }
 
 void AUxtHandInteractionActor::SetRayLength(float NewRayLength)
 {
 	RayLength = NewRayLength;
 	FarPointer->RayLength = NewRayLength;
+	EyePointer->RayLength = NewRayLength;
 }
 
+/*判断射线是否显示*/
 bool AUxtHandInteractionActor::IsInPointingPose() const
 {
 	constexpr float PointerBeamBackwardTolerance = 0.5f;
@@ -323,22 +377,26 @@ bool AUxtHandInteractionActor::IsInPointingPose() const
 
 	if (IUxtHandTracker::Get().GetJointState(Hand, EHandKeypoint::Palm, PalmOrientation, PalmPosition, PalmRadius))
 	{
+		// UE_LOG(LogUxtHandTracking, Error, TEXT("eddy IsInPointingPose entry 11"));
 		FVector PalmNormal = PalmOrientation * FVector::DownVector;
 		PalmNormal.Normalize();
 
 		if (PointerBeamBackwardTolerance >= 0)
 		{
 			FVector CameraBackward = -UUxtFunctionLibrary::GetHeadPose(GetWorld()).GetRotation().GetForwardVector();
+			//如果两个向量的点积为零，那么它们是垂直的；如果点积为正，它们是同向的；如果点积为负，它们是反向的。
 			if (FVector::DotProduct(PalmNormal, CameraBackward) > PointerBeamBackwardTolerance)
 			{
+				// UE_LOG(LogUxtHandTracking, Error, TEXT("eddy DotProduct false 11"));
 				return false;
 			}
 		}
-
+		
 		if (PointerBeamUpwardTolerance >= 0)
 		{
 			if (FVector::DotProduct(PalmNormal, FVector::UpVector) > PointerBeamUpwardTolerance)
 			{
+				// UE_LOG(LogUxtHandTracking, Error, TEXT("eddy DotProduct false 22"));
 				return false;
 			}
 		}
@@ -393,8 +451,7 @@ void AUxtHandInteractionActor::VLogHandJoints() const
 	};
 
 	// Utility function for drawing a bone segment
-	auto VlogJointSegment = [this, &HandTracker](EHandKeypoint JointA, EHandKeypoint JointB)
-	{
+	auto VlogJointSegment = [this, &HandTracker](EHandKeypoint JointA, EHandKeypoint JointB) {
 		FVector PositionA, PositionB;
 		FQuat OrientationA, OrientationB;
 		float RadiusA, RadiusB;

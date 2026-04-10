@@ -39,7 +39,7 @@ class UXTOOLS_API UUxtUIElementComponent : public USceneComponent
 	GENERATED_BODY()
 
 public:
-	UUxtUIElementComponent() = default;
+	UUxtUIElementComponent();
 
 	/** Get the element's visibility. This does not reflect if the element is visible in the scene. */
 	UFUNCTION(BlueprintCallable, Category = "Uxt UI Element", DisplayName = "Get UI Visibility Self")

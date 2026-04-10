@@ -144,4 +144,5 @@ private:
 	FTransform WorkingTransform;
 
 	bool bRecenterNextUpdate = true;
+	bool OwnerIsChildActor()const;
 };

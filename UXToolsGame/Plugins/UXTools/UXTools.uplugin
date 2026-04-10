@@ -16,7 +16,8 @@
 	"Installed": false,
 	"SupportedTargetPlatforms": [
 		"Win64",
-		"Android"
+		"Android",
+		"Linux"
 	],
 	"Modules": [
 		{
@@ -24,6 +25,7 @@
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
 			"WhitelistPlatforms": [
+				"Linux",
 				"Win64",
 				"Android"
 			]
@@ -33,6 +35,7 @@
 			"Type": "Editor",
 			"LoadingPhase": "PostEngineInit",
 			"WhitelistPlatforms": [
+				"Linux",
 				"Win64"
 			]
 		},
@@ -41,6 +44,7 @@
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
 			"WhitelistPlatforms": [
+				"Linux",
 				"Win64",
 				"Android"
 			]
@@ -50,6 +54,7 @@
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
 			"WhitelistPlatforms": [
+				"Linux",
 				"Win64"
 			]
 		},
@@ -58,6 +63,7 @@
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
 			"WhitelistPlatforms": [
+				"Linux",
 				"Win64",
 				"Android"
 			]
@@ -67,7 +73,8 @@
 			"Type": "Editor",
 			"LoadingPhase": "PostEngineInit",
 			"WhitelistPlatforms": [
-				"Win64"
+				"Win64",
+				"Linux"
 			]
 		},
 		{
@@ -75,8 +82,19 @@
 			"Type": "Runtime",
 			"LoadingPhase": "PostEngineInit",
 			"WhitelistPlatforms": [
-				"Win64"
+				"Win64",
+				"Linux"
 			]
+		},
+		{
+			"Name": "UXToolsHandPose",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "UXToolsHandPoseEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
@@ -86,7 +104,7 @@
 		},
 		{
 			"Name": "XRBase",
-			"Enabled":  true
+			"Enabled": true
 		}
 	]
 }

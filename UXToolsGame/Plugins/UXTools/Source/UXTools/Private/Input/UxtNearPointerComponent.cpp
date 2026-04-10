@@ -4,6 +4,7 @@
 #include "Input/UxtNearPointerComponent.h"
 
 #include "UXTools.h"
+#include "UxtTrackingControllerSubsystem.h"
 
 #include "Components/BoxComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -13,6 +14,8 @@
 #include "Input/UxtPointerFocus.h"
 #include "Interactions/UxtGrabTarget.h"
 #include "Interactions/UxtPokeTarget.h"
+#include "Kismet/KismetStringLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "PhysicsEngine/BodySetup.h"
@@ -143,7 +146,7 @@ UUxtNearPointerComponent::UUxtNearPointerComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	// Tick before controls
-	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PrePhysics;
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
 
 	GrabFocus = new FUxtGrabPointerFocus();
 	PokeFocus = new FUxtPokePointerFocus();
@@ -262,11 +265,10 @@ void UUxtNearPointerComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 		// Disable complex collision to enable overlap from inside primitives
 		FCollisionQueryParams QueryParams(NAME_None, false);
-
+		
 		TArray<FOverlapResult> Overlaps;
 		/*bool HasBlockingOverlap = */ GetWorld()->OverlapMultiByChannel(
 			Overlaps, ProximityCenter, FQuat::Identity, TraceChannel, FCollisionShape::MakeSphere(ProximityRadius), QueryParams);
-
 		GrabFocus->SelectClosestTarget(this, GrabPointerTransform, Overlaps);
 		PokeFocus->SelectClosestTarget(this, PokePointerTransform, Overlaps);
 	}
@@ -364,6 +366,11 @@ FTransform UUxtNearPointerComponent::GetCursorTransform() const
 
 void UUxtNearPointerComponent::UpdatePokeInteraction()
 {
+	UCameraComponent* CameraComponent = nullptr;
+	UUxtTrackingControllerSubsystem* TrackingControllerSubsystem = GEngine->GetEngineSubsystem<UUxtTrackingControllerSubsystem>();
+	check(TrackingControllerSubsystem);
+	CameraComponent = TrackingControllerSubsystem->GetPlayerFollowCameraComponent();
+	
 	FVector PokePointerLocation = GetPokePointerTransform().GetLocation();
 	UActorComponent* Target = Cast<UActorComponent>(PokeFocus->GetFocusedTarget());
 	UPrimitiveComponent* Primitive = PokeFocus->GetFocusedPrimitive();
@@ -373,11 +380,13 @@ void UUxtNearPointerComponent::UpdatePokeInteraction()
 		if (Primitive && Target)
 		{
 			bool endedPoking = false;
-
 			switch (IUxtPokeTarget::Execute_GetPokeBehaviour(Target))
 			{
 			case EUxtPokeBehaviour::FrontFace:
 				endedPoking = IsFrontFacePokeEnded(Primitive, PokePointerLocation, GetPokePointerRadius() + DebounceDepth, PokeDepth);
+				
+					UKismetSystemLibrary::DrawDebugPoint(this,PokePointerLocation,80,endedPoking?FLinearColor::Blue:FLinearColor::Green);
+				
 				break;
 			case EUxtPokeBehaviour::Volume:
 				endedPoking = !Primitive->OverlapComponent(
@@ -407,8 +416,15 @@ void UUxtNearPointerComponent::UpdatePokeInteraction()
 	else if (Target)
 	{
 		FVector Start = PreviousPokePointerLocation;
+		if(CameraComponent)
+		{
+			Start = CameraComponent->GetComponentTransform().TransformPosition(Start);
+		}
 		FVector End = PokePointerLocation;
-
+		// if((End-Start).Size()>=10)
+		// {
+		// 	Start = End+FVector(0.0,0.0,1.0);
+		// }
 		bool isBehind = bWasBehindFrontFace;
 		if (Primitive)
 		{
@@ -416,9 +432,12 @@ void UUxtNearPointerComponent::UpdatePokeInteraction()
 		}
 
 		FHitResult HitResult;
+		TArray<AActor*> Empty;
+		UKismetSystemLibrary::SphereTraceSingle(this,Start,End,GetPokePointerRadius(),UEngineTypes::ConvertToTraceType(TraceChannel),false,Empty,EDrawDebugTrace::ForOneFrame,HitResult,true);
+		HitResult = FHitResult();
 		GetWorld()->SweepSingleByChannel(
 			HitResult, Start, End, FQuat::Identity, TraceChannel, FCollisionShape::MakeSphere(GetPokePointerRadius()));
-
+		
 		if (HitResult.GetComponent() == Primitive)
 		{
 			bool startedPoking = false;
@@ -429,6 +448,10 @@ void UUxtNearPointerComponent::UpdatePokeInteraction()
 			{
 				bool bIsFacingPrimitive = IsFacingPrimitive(PokePointerTransform.GetUnitAxis(EAxis::X), Primitive);
 				startedPoking = !bWasBehindFrontFace && isBehind && bIsFacingPrimitive;
+					if(!startedPoking)
+					{
+						// UE_LOG(LogTemp,Error,TEXT("!bWasBehindFrontFace:%s && isBehind%s && bIsFacingPrimitive%s;"),*UKismetStringLibrary::Conv_BoolToString(bWasBehindFrontFace),*UKismetStringLibrary::Conv_BoolToString(isBehind),*UKismetStringLibrary::Conv_BoolToString(bIsFacingPrimitive));
+					}
 				break;
 			}
 			case EUxtPokeBehaviour::Volume:
@@ -444,8 +467,15 @@ void UUxtNearPointerComponent::UpdatePokeInteraction()
 
 		bWasBehindFrontFace = isBehind;
 	}
-
-	PreviousPokePointerLocation = PokePointerLocation;
+	if(CameraComponent)
+	{
+		PreviousPokePointerLocation = CameraComponent->GetComponentTransform().InverseTransformPosition( PokePointerLocation);
+	}
+	else
+	{
+		PreviousPokePointerLocation = PokePointerLocation;
+	}
+	
 }
 
 UObject* UUxtNearPointerComponent::GetFocusedGrabTarget(FVector& OutClosestPointOnTarget, FVector& OutNormal) const

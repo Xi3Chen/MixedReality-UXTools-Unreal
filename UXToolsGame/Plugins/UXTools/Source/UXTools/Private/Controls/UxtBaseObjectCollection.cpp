@@ -17,6 +17,11 @@ namespace
 	};
 } // namespace
 
+UUxtBaseObjectCollection::UUxtBaseObjectCollection()
+{
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
+}
+
 /**
  *
  */

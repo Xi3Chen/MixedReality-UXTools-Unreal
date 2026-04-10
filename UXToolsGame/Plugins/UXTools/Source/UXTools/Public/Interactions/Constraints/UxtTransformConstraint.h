@@ -22,6 +22,7 @@ class UXTOOLS_API UUxtTransformConstraint : public UActorComponent
 {
 	GENERATED_BODY()
 public:
+	UUxtTransformConstraint();
 	/** Enabled manipulation modes. */
 	virtual EUxtTransformMode GetConstraintType() const PURE_VIRTUAL(, return EUxtTransformMode::Translation;);
 

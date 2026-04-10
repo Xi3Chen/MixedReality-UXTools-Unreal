@@ -90,15 +90,6 @@
 			]
 		},
 		{
-			"Name": "OpenXREyeTracker",
-			"Enabled": true,
-			"SupportedTargetPlatforms": [
-				"Win64",
-				"Linux",
-				"Android"
-			]
-		},
-		{
 			"Name": "OpenXRHandTracking",
 			"Enabled": true,
 			"SupportedTargetPlatforms": [
@@ -109,7 +100,7 @@
 		},
 		{
 			"Name": "XvisioOpenXR",
-			"Enabled": true,
+			"Enabled": false,
 			"SupportedTargetPlatforms": [
 				"Win64",
 				"Linux",
@@ -125,6 +116,14 @@
 				"Linux",
 				"Android",
 				"Mac"
+			]
+		},
+		{
+			"Name": "OpenXRMsftHandInteraction",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Android"
 			]
 		}
 	]

@@ -17,6 +17,8 @@ class UUxtGrabHandler;
 class UUxtNearPointerComponent;
 class UUxtPokeHandler;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRaiseFarInteraction,UPrimitiveComponent*, Target, UUxtFarPointerComponent*, Pointer);
+
 /** Subsystem for dispatching events to interested handlers. */
 UCLASS(ClassGroup = "UXTools")
 class UXTOOLS_API UUxtInputSubsystem : public UGameInstanceSubsystem
@@ -24,6 +26,12 @@ class UXTOOLS_API UUxtInputSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(BlueprintAssignable, Category = "Uxt Far Pointer")
+	FOnRaiseFarInteraction OnRaiseFarPressed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Uxt Far Pointer")
+	FOnRaiseFarInteraction OnRaiseFarReleased;
+
 	/** Register the given handler as interested in events for a given handler interface. */
 	UFUNCTION(BlueprintCallable, Category = "UXTools|Input")
 	static bool RegisterHandler(UObject* Handler, TSubclassOf<UInterface> Interface);
@@ -155,18 +163,12 @@ void UUxtInputSubsystem::ExecuteHierarchy(UPrimitiveComponent* Target, const Fun
 {
 	if (Target && Target->GetOwner())
 	{
-		TArray<UActorComponent*> ComponentsToUpdate;
-		for (UActorComponent* Component : Target->GetOwner()->GetComponents())
+		for (UActorComponent* Child : Target->GetOwner()->GetComponents())
 		{
-			if (Component->Implements<HandlerType>() && CanHandle<HandlerType>(Component, Target) && !Handled.Contains(Component))
+			if (Child->Implements<HandlerType>() && CanHandle<HandlerType>(Child, Target) && !Handled.Contains(Child))
 			{
-				ComponentsToUpdate.Add(Component);
+				Callback(Child);
 			}
-		}
-
-		for (UActorComponent* Component : ComponentsToUpdate)
-		{
-			Callback(Component);
 		}
 	}
 }

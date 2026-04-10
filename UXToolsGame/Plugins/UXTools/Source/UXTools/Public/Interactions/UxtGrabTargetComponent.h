@@ -36,7 +36,7 @@ struct UXTOOLS_API FUxtGrabPointerData
 
 	/** The time at which interaction started, in seconds since application start. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Uxt Grab Pointer Data")
-	float StartTime;
+	float StartTime=0.0f;
 
 	/**
 	 * Transform of the pointer when it started interacting, in the local space of the target component.

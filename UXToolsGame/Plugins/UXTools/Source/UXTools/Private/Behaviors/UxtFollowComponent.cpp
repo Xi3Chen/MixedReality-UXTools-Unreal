@@ -198,8 +198,7 @@ namespace
 
 	bool PassedOrientationDeadzone(FVector CurrentToTarget, FQuat CurrentRotation, FVector FollowPosition, float DeadzoneDegrees)
 	{
-		// We don't flip the actor to face the user so the BackwardVector is the one that is facing the user.
-		FVector LeashForward = CurrentRotation * FVector::BackwardVector;
+		FVector LeashForward = CurrentRotation * FVector::ForwardVector;
 
 		FVector LeashToFollow = CurrentToTarget;
 		LeashToFollow.Normalize();
@@ -340,4 +339,13 @@ void UUxtFollowComponent::UpdateTransformToGoal(bool bSkipInterpolation, float D
 
 		GetOwner()->SetActorTransform(WorkingTransform, false);
 	}
+}
+
+bool UUxtFollowComponent::OwnerIsChildActor() const
+{
+	if(GetOwner())
+	{
+		return GetOwner()->IsChildActor() || GetOwner()->GetAttachParentActor();
+	}
+	return false;
 }

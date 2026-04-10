@@ -14,6 +14,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogManipulatorBase, Log, Log)
 
 UUxtManipulatorComponentBase::UUxtManipulatorComponentBase()
 {
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
 	MoveLogic = new UxtManipulationMoveLogic();
 	TwoHandRotateLogic = new UxtTwoHandManipulationRotateLogic();
 	TwoHandScaleLogic = new UxtTwoHandManipulationScaleLogic();

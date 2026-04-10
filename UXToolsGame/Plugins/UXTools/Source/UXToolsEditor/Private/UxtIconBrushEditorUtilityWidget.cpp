@@ -21,7 +21,6 @@ UFont* UUxtIconBrushEditorUtilityWidget::GetIconBrushFont() const
 			return Cast<UFont>(Object);
 		}
 	}
-
 	return nullptr;
 }
 

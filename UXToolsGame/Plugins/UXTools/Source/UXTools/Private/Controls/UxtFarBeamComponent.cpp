@@ -7,6 +7,7 @@
 
 #include "Engine/StaticMesh.h"
 #include "GameFramework/Actor.h"
+#include "Input/UxtEyePointerComponent.h"
 #include "Input/UxtFarPointerComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
@@ -27,6 +28,7 @@ UUxtFarBeamComponent::UUxtFarBeamComponent()
 	SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetHiddenInGame(true);
 	BindGrab = BindSplineLength = false;
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
 }
 
 void UUxtFarBeamComponent::BeginPlay()
@@ -35,24 +37,24 @@ void UUxtFarBeamComponent::BeginPlay()
 
 	if (GetOwner())
 	{
-		if (UUxtFarPointerComponent* FarPointer = GetOwner()->FindComponentByClass<UUxtFarPointerComponent>())
+		TArray<UUxtFarPointerComponent*> OwnerFarPointers;
+		GetOwner()->GetComponents<UUxtFarPointerComponent>(OwnerFarPointers);
+		if (OwnerFarPointers.Num() > 0)
 		{
-			FarPointerWeak = FarPointer;
-
-			// Tick after the pointer so we use its latest state
-			AddTickPrerequisiteComponent(FarPointer);
-
-			// Activate now if the pointer is enabled
-			if (FarPointer->IsEnabled())
+			for (UUxtFarPointerComponent* FarPointer : OwnerFarPointers)
 			{
-				OnFarPointerEnabled(FarPointer);
+				FarPointers.Add(FarPointer);
+
+				// Tick after every pointer so we always render the latest active one.
+				AddTickPrerequisiteComponent(FarPointer);
+
+				FarPointer->OnFarPointerEnabled.AddDynamic(this, &UUxtFarBeamComponent::OnFarPointerEnabled);
+				FarPointer->OnFarPointerDisabled.AddDynamic(this, &UUxtFarBeamComponent::OnFarPointerDisabled);
 			}
 
-			// Subscribe to pointer state changes
-			FarPointer->OnFarPointerEnabled.AddDynamic(this, &UUxtFarBeamComponent::OnFarPointerEnabled);
-			FarPointer->OnFarPointerDisabled.AddDynamic(this, &UUxtFarBeamComponent::OnFarPointerDisabled);
-			UMaterial* Material = GetMaterial(0)->GetMaterial();
+			RefreshActiveFarPointer();
 
+			UMaterial* Material = GetMaterial(0)->GetMaterial();
 			SetBeamMaterial(Material);
 		}
 		else
@@ -67,23 +69,53 @@ void UUxtFarBeamComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	if (UUxtFarPointerComponent* FarPointer = FarPointerWeak.Get())
+	for (const TWeakObjectPtr<UUxtFarPointerComponent>& FarPointerWeakEntry : FarPointers)
 	{
-		FarPointer->OnFarPointerEnabled.RemoveDynamic(this, &UUxtFarBeamComponent::OnFarPointerEnabled);
-		FarPointer->OnFarPointerDisabled.RemoveDynamic(this, &UUxtFarBeamComponent::OnFarPointerDisabled);
+		if (UUxtFarPointerComponent* FarPointer = FarPointerWeakEntry.Get())
+		{
+			FarPointer->OnFarPointerEnabled.RemoveDynamic(this, &UUxtFarBeamComponent::OnFarPointerEnabled);
+			FarPointer->OnFarPointerDisabled.RemoveDynamic(this, &UUxtFarBeamComponent::OnFarPointerDisabled);
+		}
 	}
+}
+
+void UUxtFarBeamComponent::RefreshActiveFarPointer()
+{
+	for (const TWeakObjectPtr<UUxtFarPointerComponent>& FarPointerWeakEntry : FarPointers)
+	{
+		if (UUxtFarPointerComponent* FarPointer = FarPointerWeakEntry.Get())
+		{
+			if (FarPointer->IsEnabled())
+			{
+				FarPointerWeak = FarPointer;
+				SetVisualEnabled(true);
+				return;
+			}
+		}
+	}
+
+	FarPointerWeak = nullptr;
+	SetVisualEnabled(false);
+}
+
+void UUxtFarBeamComponent::SetVisualEnabled(bool bEnabled)
+{
+	SetActive(bEnabled);
+	SetHiddenInGame(!bEnabled);
 }
 
 void UUxtFarBeamComponent::OnFarPointerEnabled(UUxtFarPointerComponent* FarPointer)
 {
-	SetActive(true);
-	SetHiddenInGame(false);
+	FarPointerWeak = FarPointer;
+	SetVisualEnabled(Cast<UUxtEyePointerComponent>(FarPointer) == nullptr);
 }
 
 void UUxtFarBeamComponent::OnFarPointerDisabled(UUxtFarPointerComponent* FarPointer)
 {
-	SetActive(false);
-	SetHiddenInGame(true);
+	if (FarPointerWeak.Get() == FarPointer)
+	{
+		RefreshActiveFarPointer();
+	}
 }
 
 void UUxtFarBeamComponent::SetBeamMaterial(UMaterial* NewMaterial)
@@ -104,7 +136,8 @@ void UUxtFarBeamComponent::SetBeamMaterial(UMaterial* NewMaterial)
 			{
 				if (OutParameterInfo[i].Name == FName("handIndex"))
 				{
-					float HandIndex = FarPointerWeak->Hand == EControllerHand::Left ? 0.0f : 1.0f;
+					const UUxtFarPointerComponent* FarPointer = FarPointerWeak.Get();
+					float HandIndex = (FarPointer && FarPointer->Hand == EControllerHand::Left) ? 0.0f : 1.0f;
 					MID->SetScalarParameterValue(FName("handIndex"), HandIndex);
 				}
 				if (OutParameterInfo[i].Name == FName("IsGrabbing"))

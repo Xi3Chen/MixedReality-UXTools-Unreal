@@ -33,6 +33,8 @@ UUxtRingCursorComponent::UUxtRingCursorComponent()
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> BorderMaterialFinder(TEXT("/UXTools/Pointers/Materials/M_Shadow"));
 	check(BorderMaterialFinder.Object);
 	SetMaterial(1, BorderMaterialFinder.Object);
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
+
 }
 
 void UUxtRingCursorComponent::OnRegister()

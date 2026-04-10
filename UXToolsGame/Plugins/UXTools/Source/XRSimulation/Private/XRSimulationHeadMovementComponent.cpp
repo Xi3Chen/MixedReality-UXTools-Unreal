@@ -121,7 +121,7 @@ void UXRSimulationHeadMovementComponent::TickComponent(
 		ApplyRotationInput(DeltaTime);
 		RotationInput = FRotator::ZeroRotator;
 
-		UpdatedComponent->SetWorldRotation(ViewOrientation);
+		UpdatedComponent->SetRelativeRotation(ViewOrientation);
 	}
 
 	// Move actor
@@ -173,6 +173,15 @@ bool UXRSimulationHeadMovementComponent::IsHeadMovementEnabled() const
 void UXRSimulationHeadMovementComponent::SetHeadMovementEnabled(bool bEnable)
 {
 	bEnableHeadMovement = bEnable;
+}
+
+void UXRSimulationHeadMovementComponent::ResetRotationAndLocation(FVector Location, FRotator Rotation)
+{
+	UpdatedComponent->SetRelativeLocationAndRotation(Location, Rotation);
+	ViewOrientation = UpdatedComponent->GetComponentRotation();
+	ViewPosition = UpdatedComponent->GetComponentLocation();
+	RotationInput = FRotator::ZeroRotator;
+	MovementInput = FVector::ZeroVector;
 }
 
 #undef LOCTEXT_NAMESPACE

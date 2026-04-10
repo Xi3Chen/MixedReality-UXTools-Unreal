@@ -261,3 +261,8 @@ void UUxtWidgetComponent::GetEventAndPath(
 
 	Pointers[Pointer] = LocalHitLocation;
 }
+
+UUxtWidgetComponent::UUxtWidgetComponent()
+{
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
+}

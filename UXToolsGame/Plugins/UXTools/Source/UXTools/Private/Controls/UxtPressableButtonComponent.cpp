@@ -23,6 +23,8 @@ UUxtPressableButtonComponent::UUxtPressableButtonComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	bAutoActivate = true;
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PostUpdateWork;
+
 }
 
 float UUxtPressableButtonComponent::GetFrontFaceCollisionFraction() const
@@ -191,7 +193,7 @@ void UUxtPressableButtonComponent::BeginPlay()
 
 	BoxComponent->SetupAttachment(this);
 	BoxComponent->RegisterComponent();
-
+	BoxComponent->SetTickGroup(TG_PostUpdateWork);
 	if (USceneComponent* Visuals = GetVisuals())
 	{
 		ConfigureBoxComponent(Visuals);
@@ -573,6 +575,11 @@ void UUxtPressableButtonComponent::ConfigureBoxComponent(USceneComponent* Parent
 	LocalBoxBounds = LocalBoxBounds.ExpandBy(FVector::ZeroVector, FVector::ForwardVector * MarginDist);
 
 	FTransform BoxTransform = FTransform(LocalBoxBounds.GetCenter()) * GetComponentTransform();
+	if(BoxTransform.ContainsNaN())
+	{
+		UE_LOG(LogTemp,Error,TEXT("this button create error:%s"),*this->GetName());
+		return;
+	}
 	BoxComponent->SetWorldTransform(BoxTransform);
 	BoxComponent->SetBoxExtent(LocalBoxBounds.GetExtent());
 	BoxComponent->SetCollisionProfileName(CollisionProfile);

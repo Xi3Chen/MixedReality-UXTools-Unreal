@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "HandTracking/IUxtHandTracker.h"
 #include "Utils/UxtFunctionLibrary.h"
+#include "HandTracking/IUxtHandTracker.h"
 
 namespace
 {
@@ -82,7 +83,7 @@ namespace
 		OutActivationPoint = FVector::PointPlaneProject(ActivationPoint, OutHandPlane);
 		return true;
 	}
-} // namespace
+}
 
 bool UUxtPalmUpConstraintComponent::IsHandUsableForConstraint(EControllerHand NewHand)
 {
@@ -103,13 +104,11 @@ bool UUxtPalmUpConstraintComponent::IsHandUsableForConstraint(EControllerHand Ne
 		bGazeTriggered = false;
 		return false;
 	}
-
 	if (bRequireFlatHand && !IsHandFlat(NewHand, PalmLocation, PalmUpVector))
 	{
 		bGazeTriggered = false;
 		return false;
 	}
-
 	if (bRequireGaze && !bGazeTriggered)
 	{
 		bGazeTriggered = HasEyeGaze(NewHand, HeadPose, PalmLocation);
@@ -118,7 +117,6 @@ bool UUxtPalmUpConstraintComponent::IsHandUsableForConstraint(EControllerHand Ne
 			return false;
 		}
 	}
-
 	return true;
 }
 

@@ -6,6 +6,7 @@
 #include "UXTools.h"
 
 #include "GameFramework/Actor.h"
+#include "Input/UxtEyePointerComponent.h"
 #include "Input/UxtFarPointerComponent.h"
 #include "Utils/UxtFunctionLibrary.h"
 
@@ -15,7 +16,7 @@ UUxtFarCursorComponent::UUxtFarCursorComponent()
 
 	// Will start ticking when the far pointer is enabled
 	PrimaryComponentTick.bStartWithTickEnabled = false;
-
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
 	SetHiddenInGame(true);
 }
 
@@ -25,23 +26,22 @@ void UUxtFarCursorComponent::BeginPlay()
 
 	if (const AActor* const Owner = GetOwner())
 	{
-		UUxtFarPointerComponent* FarPointer = Owner->FindComponentByClass<UUxtFarPointerComponent>();
-		if (FarPointer)
+		TArray<UUxtFarPointerComponent*> OwnerFarPointers;
+		Owner->GetComponents<UUxtFarPointerComponent>(OwnerFarPointers);
+		if (OwnerFarPointers.Num() > 0)
 		{
-			FarPointerWeak = FarPointer;
-
-			// Tick after the pointer so we use its latest state
-			AddTickPrerequisiteComponent(FarPointer);
-
-			// Activate now if the pointer is enabled
-			if (FarPointer->IsEnabled())
+			for (UUxtFarPointerComponent* FarPointer : OwnerFarPointers)
 			{
-				OnFarPointerEnabled(FarPointer);
+				FarPointers.Add(FarPointer);
+
+				// Tick after every pointer so we always render the latest active one.
+				AddTickPrerequisiteComponent(FarPointer);
+
+				FarPointer->OnFarPointerEnabled.AddDynamic(this, &UUxtFarCursorComponent::OnFarPointerEnabled);
+				FarPointer->OnFarPointerDisabled.AddDynamic(this, &UUxtFarCursorComponent::OnFarPointerDisabled);
 			}
 
-			// Subscribe to state changes
-			FarPointer->OnFarPointerEnabled.AddDynamic(this, &UUxtFarCursorComponent::OnFarPointerEnabled);
-			FarPointer->OnFarPointerDisabled.AddDynamic(this, &UUxtFarCursorComponent::OnFarPointerDisabled);
+			RefreshActiveFarPointer();
 		}
 		else
 		{
@@ -54,31 +54,64 @@ void UUxtFarCursorComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	if (UUxtFarPointerComponent* FarPointer = FarPointerWeak.Get())
+	for (const TWeakObjectPtr<UUxtFarPointerComponent>& FarPointerWeakEntry : FarPointers)
 	{
-		// for extra safety we will check if the functions are bound prior to making the call to remove them
-		if (FarPointer->OnFarPointerEnabled.IsAlreadyBound(this, &UUxtFarCursorComponent::OnFarPointerEnabled))
+		if (UUxtFarPointerComponent* FarPointer = FarPointerWeakEntry.Get())
 		{
-			FarPointer->OnFarPointerEnabled.RemoveDynamic(this, &UUxtFarCursorComponent::OnFarPointerEnabled);
+			// For extra safety check if the functions are bound prior to removing them.
+			if (FarPointer->OnFarPointerEnabled.IsAlreadyBound(this, &UUxtFarCursorComponent::OnFarPointerEnabled))
+			{
+				FarPointer->OnFarPointerEnabled.RemoveDynamic(this, &UUxtFarCursorComponent::OnFarPointerEnabled);
+			}
+			if (FarPointer->OnFarPointerDisabled.IsAlreadyBound(this, &UUxtFarCursorComponent::OnFarPointerDisabled))
+			{
+				FarPointer->OnFarPointerDisabled.RemoveDynamic(this, &UUxtFarCursorComponent::OnFarPointerDisabled);
+			}
 		}
-		if (FarPointer->OnFarPointerDisabled.IsAlreadyBound(this, &UUxtFarCursorComponent::OnFarPointerDisabled))
+	}
+}
+
+void UUxtFarCursorComponent::RefreshActiveFarPointer()
+{
+	for (const TWeakObjectPtr<UUxtFarPointerComponent>& FarPointerWeakEntry : FarPointers)
+	{
+		if (UUxtFarPointerComponent* FarPointer = FarPointerWeakEntry.Get())
 		{
-			FarPointer->OnFarPointerDisabled.RemoveDynamic(this, &UUxtFarCursorComponent::OnFarPointerDisabled);
+			if (FarPointer->IsEnabled())
+			{
+				FarPointerWeak = FarPointer;
+				SetVisualEnabled(true);
+				return;
+			}
 		}
+	}
+
+	FarPointerWeak = nullptr;
+	SetVisualEnabled(false);
+}
+
+void UUxtFarCursorComponent::SetVisualEnabled(bool bEnabled)
+{
+	SetActive(bEnabled);
+	SetHiddenInGame(!bEnabled);
+	if (!bEnabled)
+	{
+		SetPressed(false);
 	}
 }
 
 void UUxtFarCursorComponent::OnFarPointerEnabled(UUxtFarPointerComponent* FarPointer)
 {
-	SetActive(true);
-	SetHiddenInGame(false);
+	FarPointerWeak = FarPointer;
+	SetVisualEnabled(true);
 }
 
 void UUxtFarCursorComponent::OnFarPointerDisabled(UUxtFarPointerComponent* FarPointer)
 {
-	SetActive(false);
-	SetHiddenInGame(true);
-	SetPressed(false);
+	if (FarPointerWeak.Get() == FarPointer)
+	{
+		RefreshActiveFarPointer();
+	}
 }
 
 void UUxtFarCursorComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -90,6 +123,10 @@ void UUxtFarCursorComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		// Place hovering the hit location
 		const FVector& HitNormal = FarPointer->GetHitNormal();
 		FVector Location = FarPointer->GetHitPoint() + HitNormal * HoverDistance;
+		if(Location.ContainsNaN())
+		{
+			return;
+		}
 		SetWorldLocation(Location);
 
 		// Align with hit normal
@@ -103,6 +140,10 @@ void UUxtFarCursorComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		float DistanceToCamera = (UUxtFunctionLibrary::GetHeadPose(this).GetTranslation() - Location).Size();
 		float ReferenceDistance = 100.0f;
 		float NewRadius = bPressed ? PressedRadius : IdleRadius;
+		if (Cast<UUxtEyePointerComponent>(FarPointer) != nullptr)
+		{
+			NewRadius *= 3.0f;
+		}
 		NewRadius *= DistanceToCamera / ReferenceDistance;
 		SetRadius(NewRadius);
 	}

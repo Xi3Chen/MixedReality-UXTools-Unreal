@@ -20,6 +20,7 @@ class UXTOOLS_API UUxtManipulatorComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
+	UUxtManipulatorComponent();
 	/** Get if the component is automatically detecting constraints. */
 	UFUNCTION(BlueprintGetter, Category = "Uxt Manipulator")
 	bool GetAutoDetectConstraints() const;

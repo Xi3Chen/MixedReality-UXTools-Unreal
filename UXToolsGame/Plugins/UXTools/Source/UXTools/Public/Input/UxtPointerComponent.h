@@ -7,7 +7,7 @@
 #include "InputCoreTypes.h"
 
 #include "Components/ActorComponent.h"
-
+#include "Camera/CameraComponent.h"
 #include "UxtPointerComponent.generated.h"
 
 /**
@@ -44,7 +44,6 @@ public:
 	/** The hand to be used for targeting. TODO: replace with generic input device. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Uxt Pointer")
 	EControllerHand Hand = EControllerHand::AnyHand;
-
 protected:
 	/** The lock state of the pointer. */
 	bool bFocusLocked = false;

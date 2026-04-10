@@ -40,6 +40,9 @@ public:
 	float HoverDistance = 0.5f;
 
 private:
+	void RefreshActiveFarPointer();
+	void SetVisualEnabled(bool bEnabled);
+
 	UFUNCTION(Category = "Uxt Far Beam")
 	void OnFarPointerEnabled(UUxtFarPointerComponent* FarPointer);
 
@@ -50,7 +53,10 @@ private:
 	UPROPERTY(Transient)
 	UMaterialInstanceDynamic* MID;
 
-	/** Far pointer in use. */
+	/** All far pointers found on the owner actor. */
+	TArray<TWeakObjectPtr<UUxtFarPointerComponent>> FarPointers;
+
+	/** Currently active far pointer in use. */
 	TWeakObjectPtr<UUxtFarPointerComponent> FarPointerWeak;
 
 	/** Should we send grab to the material */

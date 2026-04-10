@@ -20,6 +20,11 @@ namespace
 	}
 } // namespace
 
+UUxtManipulatorComponent::UUxtManipulatorComponent()
+{
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
+}
+
 bool UUxtManipulatorComponent::GetAutoDetectConstraints() const
 {
 	return bAutoDetectConstraints;

@@ -143,6 +143,44 @@ AXRSimulationActor* UUxtXRSimulationSubsystem::GetOrCreateInputSimActor(APlayerC
 	return SimulationActor;
 }
 
+AXRSimulationActor* UUxtXRSimulationSubsystem::GetOrCreateInputSimActor(APawn* TargetPawn)
+{
+	// Only create one actor
+	if (SimulationActorWeak.IsValid())
+	{
+		return SimulationActorWeak.Get();
+	}
+
+	if (!TargetPawn)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("TargetPawn is null in GetOrCreateInputSimActor"));
+		return nullptr;
+	}
+
+	FActorSpawnParameters p;
+	p.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	p.bDeferConstruction = true;
+
+	UWorld* World = TargetPawn->GetWorld();
+	AXRSimulationActor* SimulationActor = World->SpawnActor<AXRSimulationActor>(p);
+	SimulationActorWeak = SimulationActor;
+
+	SimulationActor->SetSimulationState(SimulationState);
+
+	// Explicitly enable input using the pawn's controller
+	if (APlayerController* PlayerController = Cast<APlayerController>(TargetPawn->GetController()))
+	{
+		SimulationActor->EnableInput(PlayerController);
+	}
+
+	// Attach to the pawn instead of the player controller
+	SimulationActor->AttachToActor(TargetPawn, FAttachmentTransformRules::KeepRelativeTransform);
+
+	UGameplayStatics::FinishSpawningActor(SimulationActor, FTransform::Identity);
+
+	return SimulationActor;
+}
+
 void UUxtXRSimulationSubsystem::DestroyInputSimActor()
 {
 	if (AActor* SimulationActor = SimulationActorWeak.Get())

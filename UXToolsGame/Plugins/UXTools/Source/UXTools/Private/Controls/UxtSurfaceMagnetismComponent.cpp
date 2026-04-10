@@ -16,6 +16,8 @@ UUxtSurfaceMagnetismComponent::UUxtSurfaceMagnetismComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.TickGroup = ETickingGroup::TG_LastDemotable;
+
 	bAutoActivate = false;
 }
 

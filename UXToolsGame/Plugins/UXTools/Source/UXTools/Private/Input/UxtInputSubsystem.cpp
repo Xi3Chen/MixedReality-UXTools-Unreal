@@ -79,6 +79,7 @@ void UUxtInputSubsystem::RaiseExitFarFocus(UPrimitiveComponent* Target, UUxtFarP
 void UUxtInputSubsystem::RaiseFarPressed(UPrimitiveComponent* Target, UUxtFarPointerComponent* Pointer)
 {
 	UUxtInputSubsystem* InputSubsystem = GetInputSubsystem(Pointer);
+	InputSubsystem->OnRaiseFarPressed.Broadcast(Target,Pointer);
 	InputSubsystem->RaiseEvent<UUxtFarHandler>(
 		Target, [&Pointer](UObject* Handler) { IUxtFarHandler::Execute_OnFarPressed(Handler, Pointer); });
 }
@@ -93,6 +94,7 @@ void UUxtInputSubsystem::RaiseFarDragged(UPrimitiveComponent* Target, UUxtFarPoi
 void UUxtInputSubsystem::RaiseFarReleased(UPrimitiveComponent* Target, UUxtFarPointerComponent* Pointer)
 {
 	UUxtInputSubsystem* InputSubsystem = GetInputSubsystem(Pointer);
+	InputSubsystem->OnRaiseFarReleased.Broadcast(Target,Pointer);
 	InputSubsystem->RaiseEvent<UUxtFarHandler>(
 		Target, [&Pointer](UObject* Handler) { IUxtFarHandler::Execute_OnFarReleased(Handler, Pointer); });
 }

@@ -9,6 +9,7 @@ AUxtBasePressableButtonActor::AUxtBasePressableButtonActor()
 {
 	ButtonComponent = CreateDefaultSubobject<UUxtPressableButtonComponent>(TEXT("UxtPressableButton"));
 	RootComponent = ButtonComponent;
+	PrimaryActorTick.TickGroup = ETickingGroup::TG_LastDemotable;
 }
 
 TScriptInterface<IUxtPokeTarget> AUxtBasePressableButtonActor::GetPokeTarget_Implementation()
